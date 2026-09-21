@@ -1,0 +1,842 @@
+/* Amik — the board's own stylesheet.
+   ═══════════════════════════════════════════════════════════════
+   Everything is `.ak*` or a plain element, because embedded this
+   lands in a page Amik does not own and no selector may collide.
+
+   THE TOKENS ARE THE THEME. One `:root` block, and a dark variant
+   that follows the reader's own setting. There is no switcher and no
+   theme list: a host that wants either has one already. Override any
+   of these in your own stylesheet and the board follows — that is
+   the whole configuration surface for how it looks. */
+
+:root {
+  --font-display: Inter, -apple-system, sans-serif;
+  --font-body: Inter, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --radius: 20px;
+  --radius-btn: 99px;
+
+  --bg: #FAF9F7;
+  --card: #FFFFFF;
+  --border: #E5E1DA;
+  --text: #1C1A17;
+  --muted: #6B6560;
+  --primary: #6B4E2E;
+  --on-primary: #FFFFFF;
+  --secondary: #E8E4DD;
+  --on-secondary: #1C1A17;
+  --accent: #A16207;
+  --on-accent: #FFFFFF;
+  --danger: #B3261E;
+  --ok: #3F6212;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #14120F;
+    --card: #1D1A16;
+    --border: #322D26;
+    --text: #F0EDE8;
+    --muted: #A39B92;
+    --primary: #C89B6B;
+    --on-primary: #14120F;
+    --secondary: #2A251F;
+    --on-secondary: #F0EDE8;
+    --accent: #D4A24C;
+    --on-accent: #14120F;
+    --danger: #E5796F;
+    --ok: #9BCB5A;
+  }
+}
+
+/* ── the pieces the board borrows from a general stylesheet ────────── */
+* { margin:0; padding:0; box-sizing:border-box; }
+body { font-family:var(--font-body); background:var(--bg); color:var(--text);
+  touch-action:manipulation;
+  transition:background .25s,color .25s; padding-bottom:80px; }
+.wrap { max-width:960px; margin:0 auto; padding:24px; }
+h1 { font-family:var(--font-display); font-size:30px; margin:28px 0 4px; }
+h3 { font-family:var(--font-display); font-size:15px;
+  text-transform:uppercase; letter-spacing:1px; margin:28px 0 12px;
+  color:var(--muted); }
+.row { display:flex; flex-wrap:wrap; gap:12px; align-items:center; }
+.chip { border:1px solid var(--border); background:transparent;
+  color:var(--text); border-radius:99px; padding:7px 14px; font-size:13px;
+  font-weight:600; cursor:pointer; font-family:var(--font-body);
+  transition:all .2s; }
+.chip:hover { border-color:var(--accent); }
+/* Every focusable control, enumerated — a type left off this list falls
+   back to the browser's own focus ring (blue on Chrome/macOS), which is
+   how `textarea` shipped unthemed until 2026-08-11. A test asserts the
+   list stays complete. */
+.chip:focus-visible, .btn:focus-visible, input:focus-visible,
+select:focus-visible, textarea:focus-visible, button:focus-visible,
+pre:focus-visible, .mdbox:focus-visible, .extext:focus-visible,
+a:focus-visible, summary:focus-visible { outline:2px solid var(--accent);
+  outline-offset:2px; }
+/* Every scroller, enumerated, for the same reason the list above is: one
+   left off wears the UA's own scrollbar — grey on a warm board, and a
+   light-mode one over a dark theme — which is how the board's bottom bar
+   shipped looking like Chrome's until 2026-09-18. A test asserts the list
+   holds every scroller in this file.
+
+   BOTH spellings, and they are not redundant. `scrollbar-color` is the
+   standard property, and the one Chrome obeys — once `scrollbar-width` is
+   set there the ::-webkit-* pseudo-elements are ignored outright, so the
+   standard pair is the whole fix in Chrome and Firefox. Safari reads
+   neither and needs the pseudo-elements. `height` as well as `width`:
+   width alone leaves a HORIZONTAL bar at the UA's own thickness, and the
+   board's only scrollbar is horizontal. */
+.akboard, .akdrop, .akscroll, .akverifytail { scrollbar-width:thin;
+  scrollbar-color:var(--muted) transparent; }
+.akboard::-webkit-scrollbar, .akdrop::-webkit-scrollbar,
+.akscroll::-webkit-scrollbar,
+.akverifytail::-webkit-scrollbar { width:8px; height:8px; }
+.akboard::-webkit-scrollbar-track, .akdrop::-webkit-scrollbar-track,
+.akscroll::-webkit-scrollbar-track,
+.akverifytail::-webkit-scrollbar-track { background:transparent; }
+.akboard::-webkit-scrollbar-thumb, .akdrop::-webkit-scrollbar-thumb,
+.akscroll::-webkit-scrollbar-thumb,
+.akverifytail::-webkit-scrollbar-thumb { background:var(--muted);
+  border-radius:8px; }
+.akboard::-webkit-scrollbar-thumb:hover, .akdrop::-webkit-scrollbar-thumb:hover,
+.akscroll::-webkit-scrollbar-thumb:hover,
+.akverifytail::-webkit-scrollbar-thumb:hover { background:var(--text); }
+.btn { border:none; border-radius:var(--radius-btn); padding:11px 20px;
+  font-size:14px; font-weight:600; cursor:pointer;
+  font-family:var(--font-body); transition:transform .15s,opacity .15s;
+  text-decoration:none; display:inline-block; }
+/* display:inline-block above beats the browser's own [hidden] rule --
+   the same trap .akpencil, .akftoggle, .akfield and .akq all carry.
+   Without it, "Discard the work" showed on every card including the
+   ones with no branch to discard. */
+.btn[hidden] { display:none; }
+/* A quieter button: smaller, outlined, and never the brand colour.
+   For an action that is real but rare, sitting beside prose rather
+   than in a row of primary controls. */
+.btn.small { padding:6px 12px; font-size:12.5px; font-weight:500; }
+.btn.outline { background:transparent; border:1px solid var(--border);
+  color:var(--muted); }
+.btn.outline:hover { border-color:var(--accent); color:var(--accent); }
+.btn.outline.warn:hover { border-color:var(--danger);
+  color:var(--danger); }
+/* The row under an outcome. A rule above it, because these act on the
+   card rather than on the words directly above them. */
+.akoutacts { display:flex; flex-wrap:wrap; gap:8px; margin-top:20px;
+  padding-top:14px; border-top:1px solid var(--border); }
+.btn:hover { transform:translateY(-1px); opacity:.92; }
+/* Any button that cannot act says so before you try. This was per-component
+   (.switch, .page-chat-form) with no rule for .btn itself, so a newly
+   disabled button anywhere looked fully enabled — the same enumeration miss
+   as the anchor colour and the textarea focus ring. A test asserts it. */
+.btn:disabled { opacity:.5; cursor:not-allowed; }
+.btn:disabled:hover { transform:none; opacity:.5; }
+.btn.primary { background:var(--primary); color:var(--on-primary); }
+.btn.secondary { background:var(--secondary); color:var(--on-secondary); }
+/* A button that sits on a heading line rather than under a form. Same
+   proportions as `.load-earlier`, which is the existing small precedent. */
+.btn.btn-sm { padding:6px 14px; font-size:12.5px; }
+.btn.accent { background:var(--accent); color:var(--on-accent,#fff); }
+.btn.danger { background:var(--danger); color:#fff; }
+.btn.ghost { background:transparent; color:var(--text);
+  border:1.5px solid var(--border); }
+label { display:block; font-size:13px; font-weight:600; margin-bottom:6px; }
+a { color:var(--accent); }
+input[type=text], input[type=date], select, textarea { padding:11px 13px;
+  border-radius:calc(var(--radius) - 4px); font-size:14px;
+  font-family:var(--font-body); background:var(--card);
+  border:1.5px solid var(--border); color:var(--text); }
+textarea { width:100%; resize:vertical; min-height:64px; }
+.meta { font-size:13px; color:var(--muted); font-family:var(--font-mono); }
+/* Compact relative time ("1m" / "14h" / "15d") — the exact timestamp
+   shows in a floating tooltip on hover (see .time-ago-tip below), not
+   inline, so this stays tiny wherever a table or list would otherwise
+   need a whole date+time column. */
+.time-ago { font-family:var(--font-mono); font-size:12px;
+  color:var(--muted); cursor:help; flex:none; white-space:nowrap; }
+/* A floating-card look, shared with the link preview below —
+   no title/body split, no spinner (the text is already known, nothing
+   to fetch). Wraps rather than staying to one line since the workflow
+   viewer's action/duration tooltips run to full sentences, not just a
+   timestamp. */
+.time-ago-tip { position:absolute; z-index:30;
+  background:var(--card); color:var(--text); border:1px solid var(--border);
+  border-radius:10px; padding:6px 10px; font-size:12px;
+  font-family:var(--font-mono); max-width:24em; white-space:normal;
+  line-height:1.5;
+  box-shadow:0 8px 24px color-mix(in srgb, var(--text) 14%, transparent);
+  pointer-events:none; }
+.nodata { color:var(--muted); font-size:13px; font-style:italic; }
+/* Callout family — inline help/notice blocks used across pages.
+   Variants: .info (accent) · .tip (ok) · .warn (danger, soft) ·
+   .alert (danger, loud). Token-tinted via color-mix so every theme/mode
+   works; the emoji prefix lives in the template, not here. */
+.callout { border-radius:var(--radius); padding:12px 16px; font-size:14px;
+  line-height:1.55; color:var(--text); margin:14px 0;
+  border-left:3px solid var(--border);
+  background:color-mix(in srgb, var(--muted) 10%, transparent); }
+.callout.info { border-left-color:var(--accent);
+  background:color-mix(in srgb, var(--accent) 12%, transparent); }
+.callout.tip { border-left-color:var(--ok);
+  background:color-mix(in srgb, var(--ok) 12%, transparent); }
+.callout.warn { border-left-color:var(--danger);
+  background:color-mix(in srgb, var(--danger) 10%, transparent); }
+.callout.alert { border-left-color:var(--danger); font-weight:600;
+  background:color-mix(in srgb, var(--danger) 18%, transparent); }
+.callout code { font-family:var(--font-mono); font-size:13px; }
+/* Rendered card prose */
+.akprose { max-width:720px; line-height:1.65; font-size:15px; }
+.akprose h1 { margin:18px 0 10px; }
+.akprose h2 { font-family:var(--font-display); font-size:19px;
+  margin:22px 0 8px; }
+.akprose h3 { margin:18px 0 8px; }
+.akprose h4 { margin:14px 0 6px; }
+.akprose p { margin:0 0 10px; }
+.akprose ul, .akprose ol { margin:0 0 12px 22px; }
+.akprose li { margin-bottom:5px; }
+/* A nested list is PART of its parent item, so it must not also carry
+   the block-level gap a top-level list ends with — that stacked with
+   the parent <li>'s own margin and made every branch point gap wider
+   than a plain sibling. One rhythm at every depth. */
+/* keep the 22px indent — the shorthand `margin:5px 0 0` zeroed it
+   and flattened every level into the same column */
+.akprose li > ul, .akprose li > ol { margin:5px 0 0 22px; }
+.akprose li:last-child { margin-bottom:0; }
+.akprose blockquote { border-left:3px solid var(--accent);
+  padding:6px 14px; margin:0 0 12px; color:var(--muted);
+  background:color-mix(in srgb, var(--accent) 7%, transparent);
+  border-radius:0 var(--radius) var(--radius) 0; }
+.akprose hr { border:none; margin:22px 0;
+  border-top:2px solid var(--border); }
+.akprose code { font-family:var(--font-mono); font-size:13px;
+  background:color-mix(in srgb, var(--muted) 12%, transparent);
+  padding:1px 5px; border-radius:5px; }
+.akprose a { color:var(--accent); }
+/* ── ask() dialog ────────────────────────────────────────────────────────
+   Native <dialog>, so the browser handles the backdrop, ESC and the focus
+   trap. All that is left is making it look like the rest of the app —
+   without this it renders as the UA default: full-bleed, top-left, no
+   padding. Uses the same card/border/radius tokens as everything else, so
+   it follows the theme and the light/dark toggle for free. */
+dialog.ask { border:1px solid var(--border); border-radius:var(--radius);
+  background:var(--card); color:var(--text); padding:24px 26px 20px;
+  max-width:440px; width:calc(100% - 40px); box-shadow:0 18px 50px
+  rgba(0,0,0,.28); font-family:var(--font-body);
+  /* The UA centres a modal dialog with margin:auto — which the `*` reset
+     at the top of this file wipes out, pinning it to the top-left. Put it
+     back here rather than carving an exception into the reset. */
+  margin:auto; }
+dialog.ask::backdrop { background:rgba(0,0,0,.45);
+  backdrop-filter:blur(2px); }
+dialog.ask h3 { font-family:var(--font-display); font-size:19px;
+  margin:0 0 10px; letter-spacing:0; text-transform:none; color:var(--text); }
+/* Scoped to #askbody rather than any dialog.ask p — the step modal (a
+   future dialog reusing the same .ask look) renders markdown (enrich.md)
+   whose paragraphs must NOT inherit this confirm-body styling. */
+/* `pre-line`, because the body is set as TEXT and the conflict dialog's
+   is two paragraphs: what moved on disk, then what the two buttons cost.
+   Without it they run together into one sentence that reads as neither. */
+/* The optional field on a confirm that wants a sentence too.
+   `display:block` beats the browser's own [hidden] rule, so the hidden
+   state has to be said — the fifth place in this file that has needed
+   it, after .akpencil, .akftoggle, .akfield and .btn. */
+#askfield { display:block; margin:0 0 20px; }
+#askfield[hidden] { display:none; }
+#asktext { width:100%; min-width:0; }
+#askbody, #askbody p { margin:0 0 20px; font-size:14.5px; line-height:1.55;
+  color:var(--muted); white-space:pre-line; }
+dialog.ask .ask-actions { display:flex; justify-content:flex-end; gap:10px; }
+dialog.ask .btn { min-width:96px; }
+/* Cancel is autofocused so Enter is always the safe answer — make that
+   visible rather than a stray-looking outline on the wrong control. */
+dialog.ask .btn:focus-visible { outline:2px solid var(--accent);
+  outline-offset:2px; }
+@media (max-width:520px) {
+  dialog.ask .ask-actions { flex-direction:column-reverse; }
+  dialog.ask .btn { width:100%; }
+}
+/* Same floating-card look as .time-ago-tip — the truncated instantiated
+   button label carries its full text here instead of a native title=""
+   (themed, consistent with every other hover label in the app). The
+   [data-tip] qualifier is load-bearing, not decoration — see the button
+   override further down for why. */
+.tip[data-tip] { cursor:help; }
+
+/* ── /amik — the owner's dev board ───────────────────────────────────
+   The board wants the whole window: seven columns is more than the 960px
+   reading measure every other page is set to. Scoped to this page's body
+   class so nothing else widens with it. */
+/* The board fills what is left of the window and each column scrolls its
+   own cards, so the headers stay put however long Done gets.
+
+   A CHAIN of flex boxes rather than calc() against a measured chrome
+   height: the nav, the h1, the standing callout and the skipped-lines
+   warning are all variable, and the callout rewraps with the window, so
+   any constant subtracted here would be wrong at some width.
+
+   HEIGHT, not min-height: a min-height body simply GROWS to fit its
+   content, so the board never gets a bounded box to shrink into and the
+   whole page scrolls instead of the columns. The floor on .akboard is
+   the graceful fallback -- on a window too short for it, the page gets
+   its scrollbar back rather than showing a clipped board. dvh, not vh:
+   on iOS vh counts the space under the browser chrome. */
+/* Amik's own header. Standing alone the board needs SOMETHING naming
+   what you are looking at — a browser tab title is not enough when the
+   window is one of several. No navigation: the board is the whole
+   application when it runs by itself, and when it is embedded the host's
+   navigation is the host's to draw. flex:0 0 auto so it cannot grow when
+   the board scrolls beneath it.
+
+   Three GRID cells — the mark, the host's name, the gate — not a flex row
+   with a spacer: the name is centred on the BAR, and a flex row would
+   centre it between whatever the two ends happen to weigh, moving it
+   every time the toggle changes width. An absent name or an absent
+   toggle leaves its cell empty and shifts nothing. */
+.akhead { flex:0 0 auto; display:grid; align-items:center;
+  grid-template-columns:1fr auto 1fr; gap:10px; padding:12px 16px 0; }
+.akbrand { display:inline-flex; align-items:center; gap:7px;
+  font-family:var(--font-display); font-size:17px;
+  letter-spacing:.01em; color:var(--text); }
+/* The mark is an emoji, so it carries its own colour and no token can
+   tint it. Sized a little above the word and with line-height:1, because
+   an emoji glyph overshoots its box and would otherwise set the bar's
+   height. */
+.akmark { flex:0 0 auto; font-size:18px; line-height:1; }
+/* The host project, quieter than the mark on purpose: the board belongs
+   to a project and says so without competing with it. Ellipsised rather
+   than wrapped — the bar is one line and a long project name must not be
+   able to make it two. */
+.akhost { min-width:0; font-size:13px; color:var(--muted);
+  text-align:center; white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; }
+.akarm { justify-self:end; display:inline-flex; align-items:center; }
+.akarmbtn { display:inline-flex; align-items:center; justify-content:center;
+  width:30px; height:30px; padding:0; border-radius:var(--radius-btn);
+  border:1px solid var(--border); background:var(--card);
+  color:var(--muted); cursor:pointer; transition:color .15s,
+  border-color .15s; }
+.akarmbtn:hover { color:var(--text); border-color:var(--muted); }
+/* Disabled only while a write is in flight, so a double-click cannot
+   send two. */
+.akarmbtn[disabled] { opacity:.5; cursor:default; }
+/* Armed is the state worth colouring; paused is the resting look. The
+   GLYPH shows the action available — pause bars while it is armed — so
+   the colour is what says which state it is in, and the two never say
+   the same thing twice. */
+.akarmbtn[data-armed="true"] { color:var(--ok); border-color:var(--ok); }
+.akarmbtn .akarmpause, .akarmbtn .akarmplay { display:none; }
+.akarmbtn[data-armed="true"] .akarmpause { display:inline-flex; }
+.akarmbtn[data-armed="false"] .akarmplay { display:inline-flex; }
+
+body.akpage { padding-bottom:0; height:100dvh;
+  display:flex; flex-direction:column; }
+/* The board takes the window, so the page gives up its chrome: the title
+   is in the browser tab already, and the counts are on the columns. The
+   h1 stays in the DOCUMENT — clipped, not display:none, which would take
+   it from screen readers too and leave the page with no heading. */
+body.akpage h1 { position:absolute; width:1px; height:1px; margin:0;
+  overflow:hidden; clip-path:inset(50%); white-space:nowrap; }
+/* margin:0, not the shared `margin:0 auto`: AUTO cross-axis margins
+   disable stretch on a flex item, so the inherited centering collapsed
+   the board to its content width with a gutter either side. */
+/* Tighter than a reading page's 24px: there is no title to sit under. */
+body.akpage .wrap { max-width:none; margin:0; padding:10px 16px 0;
+  flex:1 1 auto; min-height:0; display:flex; flex-direction:column; }
+.akboard { display:flex; gap:14px; align-items:stretch; overflow-x:auto;
+  padding:4px 4px 14px; margin-top:0;
+  flex:1 1 auto; min-height:340px; }
+/* flex:0 0 280px is NOT enough on its own: a flex item's default
+   min-width:auto resolves to its MIN-CONTENT width and silently overrides
+   flex-basis, so one long unbreakable string in a card used to stretch its
+   whole column past 900px. min-width:0 is what makes 280px mean 280px. */
+.akcol { flex:0 0 280px; min-width:0; background:var(--card);
+  border:1px solid var(--border); border-radius:var(--radius);
+  padding:14px 12px 12px; display:flex; flex-direction:column; }
+/* The header is a button so the keyboard can open a column; every UA
+   button default has to come back off. */
+/* The bar carries the rule; the toggle and the + sit on it, because a +
+   nested inside the toggle would be a button inside a button. */
+.akcolbar { display:flex; align-items:center; gap:6px;
+  padding-bottom:8px; margin-bottom:10px;
+  border-bottom:1px solid var(--border); }
+.akcolhead { display:flex; align-items:center; gap:7px;
+  flex:1; min-width:0; background:none; border:none; padding:0; margin:0;
+  font:inherit; color:var(--text); cursor:pointer; text-align:left; }
+/* A create control: the one button on a surface that MAKES something, so
+   it is the one thing wearing the primary colour. Not a .chip and not a
+   tooltip — a grey outlined + needed a hover to explain itself, which is
+   the wrong shape for the button you reach for most. */
+.addbtn { flex:0 0 auto; width:22px; height:22px; padding:0; border:none;
+  border-radius:50%; cursor:pointer; background:var(--primary);
+  color:var(--on-primary); display:grid; place-items:center; }
+/* display:block on the child, or the SVG sits on the text baseline and
+   the whole icon rides a couple of pixels low inside the circle. */
+.addbtn svg { display:block; }
+.addbtn:hover { opacity:.9; }
+/* Board-specific, and the only board-specific thing about it: a shut
+   column has nothing to add to. */
+.akcollapsed .addbtn { display:none; }
+.akcolhead:hover .akcolname { color:var(--accent); }
+.akcolname { font-family:var(--font-display); font-weight:600;
+  font-size:14px; overflow:hidden; text-overflow:ellipsis;
+  white-space:nowrap; }
+/* The count LEADS the name — it is the number you scan a board for. A
+   pill, so it reads as a quantity rather than as part of the title. */
+.akcount { flex:0 0 auto; order:-1; color:var(--muted); font-size:11px;
+  font-variant-numeric:tabular-nums; background:var(--bg);
+  border:1px solid var(--border); border-radius:999px; padding:1px 7px; }
+.akcount[hidden] { display:none; }
+/* A shut column keeps its header and count and gives up its width. The
+   chevron sits just after the NAME, not out in the corner the + needs —
+   and it has to be there: without it a collapsed "54 Done" and an empty
+   "0 Doing" render as the same thing, which is a worse question to leave
+   the reader with than a glyph was to remove. */
+.akcolhead::after { content:"\25BE"; color:var(--muted); font-size:9px;
+  line-height:1; }
+.akcollapsed .akcolhead::after { content:"\25B8"; }
+.akcol.akcollapsed { flex-basis:150px; }
+.akcol.akcollapsed .akdrop { display:none; }
+/* The scroller. It takes the column's leftover height, and min-height:0 is
+   what allows a flex child to be SHORTER than its content — without it the
+   column grows past the board instead of the cards scrolling. */
+.akdrop { flex:1 1 auto; min-height:52px; overflow-y:auto;
+  margin:0 -4px; padding:0 4px; }
+
+/* A card is a button because clicking it opens the modal — the keyboard
+   and screen-reader story comes free, and nothing here submits. */
+.akcard { display:block; width:100%; text-align:left; cursor:pointer;
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:12px; padding:9px 10px; margin-bottom:8px;
+  font:inherit; color:var(--text);
+  /* The other half of the column-width fix: a long id, URL or code span
+     has to be allowed to break, or it sets a min-content width the column
+     is obliged to honour. */
+  min-width:0; overflow-wrap:anywhere; }
+.akcard:hover { border-color:var(--accent); }
+.akcard:active { cursor:grabbing; }
+.akcard.dragging { opacity:.45; border-style:dashed;
+  border-color:var(--accent); }
+/* An empty column's message IS its drop target, so it is drawn as one —
+   a dashed box reads as a place a card goes, where a bare line of text
+   reads as a caption about the absence. */
+.akempty { margin:0; border:1px dashed var(--border); border-radius:12px;
+  padding:18px 10px; text-align:center; }
+.aktitle { display:block; font-size:13px; line-height:1.4; }
+.aktitle code { font-family:var(--font-mono); font-size:11px; }
+.akchips { display:flex; flex-wrap:wrap; gap:5px; align-items:center;
+  margin-top:7px; }
+.akchips .chip { font-size:10px; padding:1px 7px; }
+/* A rung that BLOCKS reads loud; the rest of the ladder is information
+   about the card, not a warning about it. */
+.akplan { color:var(--muted); }
+.akblocking { border-color:var(--accent); color:var(--accent); }
+.akconflict { border-color:var(--danger); color:var(--danger); }
+/* A duplicate heading is a contradiction in the prose itself, so it
+   takes the same treatment as the conflict chip rather than the
+   accent one. */
+.akdup { border-color:var(--danger); color:var(--danger); }
+/* A question waiting is not an error — the card is doing what it should,
+   which is waiting. It reads as attention rather than alarm, so it takes
+   the accent rather than the danger token. */
+.akquestion { border-color:var(--accent); color:var(--accent); }
+.akgrp { color:var(--muted); }
+/* A branch is a fact about git, not a state of the work — it reads as
+   quiet reference rather than as a status the owner has to act on. */
+/* An agent has this card. Subtle on purpose: it sits in the same chip
+   row as everything else and reads as a state, not an alarm. This chip is
+   the one with no `.akchiplabel`, so it needs its own inline-flex: the
+   icon and the spinner sit side by side with a gap, and the spinner gets
+   a box to be a circle in. */
+.akworking { display:inline-flex; align-items:center; gap:4px;
+  border-color:var(--accent); color:var(--accent); }
+/* `display` is load-bearing, not tidying: width, height and `transform`
+   all have no effect on an inline non-replaced element, so without it the
+   dot is a 3px smudge of borders that never turns. */
+.akspin { display:inline-block; flex:none;
+  width:8px; height:8px; border-radius:50%;
+  border:1.5px solid currentColor; border-top-color:transparent;
+  animation:akspin .9s linear infinite; }
+@keyframes akspin { to { transform:rotate(360deg); } }
+/* A spinner is decoration; motion that cannot be stopped is not. The dot
+   stays, so the chip still reads the same — it simply stops turning. */
+@media (prefers-reduced-motion: reduce) {
+  .akspin { animation:none; border-top-color:currentColor; opacity:.5; }
+}
+.akbranch { border-color:var(--border); color:var(--muted); }
+/* The text beside a chip's icon. An icon-only chip has no accessible
+   name at all — the SVG is aria-hidden and a chip on a draggable
+   button-card cannot be made focusable to reach its own tooltip, so the
+   label is the only thing that names it without a mouse. A branch name
+   is long and a column is 280px, so it truncates and the tooltip keeps
+   the whole string. */
+.akchiplabel { overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  max-width:16ch; }
+.akchips .chip:has(.akchiplabel) { display:inline-flex; align-items:center;
+  gap:4px; max-width:100%; }
+/* Inert on purpose -- the modal keeps the one way in, and a card face is
+   also a drag handle an anchor inside it would fight. `.akproto` is
+   already taken by the modal's link paragraph, which styles a block, not
+   a chip, so the names stay distinct. */
+.akhasproto { border-color:var(--border); color:var(--muted); }
+
+/* [open] ONLY. A bare `display:flex` here would beat the UA's own
+   `dialog:not([open]) { display:none }` and leave the modal on screen
+   permanently — the same class of trap as every other UA default this
+   file has had to put back. */
+#akdlg[open] { display:flex; flex-direction:column; }
+#akdlg { max-width:min(760px, 92vw); max-height:86dvh; overflow:hidden; }
+/* Only the middle scrolls. min-height:0 is what lets a flex child be
+   SHORTER than its content; without it the column grows and the dialog
+   scrolls as a whole again.
+
+   The padding is not spacing — it is ROOM FOR THE FOCUS RING. An outline
+   is painted OUTSIDE the border box, and a scroll container clips its
+   children, so with a flush edge every field's ring was sheared off at
+   the left and right and the editor's at the bottom. 4px of outline
+   (2px at 2px offset) needs at least that much clip box; the negative
+   margin gives it back so nothing moves on screen. */
+.akscroll { flex:1 1 auto; min-height:0; overflow-y:auto;
+  padding:4px 6px; margin:-4px -6px 0; }
+
+/* A real last row, not a sticky bar. Sticky with an opaque background
+   painted over whatever scrolled beneath it, and what scrolled beneath
+   it was the editor's bottom border. */
+/* 10px, not 14: the scroller keeps its bottom padding rather than
+   cancelling it with a negative margin, because that margin pulled this
+   row up over exactly the 4px the focus ring needs — so a box flexed to
+   the bottom of a tab pane had its ring sheared off against this border.
+   The 4px it gives back comes out of here, so the gap is unchanged. */
+/* The id is what wins the specificity fight with `dialog.ask
+   .ask-actions`, which sets flex-end for the confirm dialog -- where two
+   buttons at one end is right. This row has three things and two ends. */
+#akdlg .ask-actions { flex:0 0 auto; padding-top:10px; margin-top:2px;
+  border-top:1px solid var(--border); justify-content:space-between; }
+
+@media (max-width:700px) {
+  .akcol { flex-basis:82vw; }
+}
+
+/* ── the amik modal's view mode ─────────────────────────────────────
+   How a card opens: what it says, as chips, and what it is about, as
+   prose. No `display` on #akview or #akform — the moment one lands there,
+   `[hidden]` stops working and both modes show at once, which is the trap
+   .akfield, .akqlist and .akq each fell into. */
+.akviewhead { display:flex; align-items:flex-start;
+  justify-content:space-between; gap:10px; margin:0 0 14px; }
+/* The strip is the card face's own, so it arrives with .akchips' top
+   margin — which here would push it off the pencil's line. A dialog has
+   the room the 280px column did not, so the chips take a step up in size
+   with it. */
+.akvchips { margin-top:0; }
+/* The one chip that is a control. It has to read as clickable without
+   becoming a button -- the base `a` rule would paint it accent-on-accent
+   inside a chip, so the colour is stated here. */
+.akvproto { text-decoration:none; cursor:pointer;
+  border-color:var(--accent); color:var(--accent); }
+.akvproto:hover { background:var(--accent); color:var(--bg); }
+.akvchips .chip { font-size:11px; padding:2px 8px; }
+.akstatus, .akhandling { color:var(--muted); }
+.akviewbody { margin:0; }
+/* The last paragraph's margin is the gap above the action row twice
+   over. */
+.akviewbody > :last-child { margin-bottom:0; }
+
+/* ── the amik modal's field strip ───────────────────────────────────
+   The fields the modal owns. status and rank are deliberately absent:
+   they belong to the drag. */
+/* The id sits under the title because that is what you need when you are
+   about to grep for the row or point a `related` at it. The gap below it
+   is deliberate — the title block and the form are two different things. */
+.akid { margin:2px 0 22px; }
+.akid code { font-family:var(--font-mono); font-size:11px;
+  color:var(--muted); }
+/* Lifted into this slot by the modal; empty and zero-height for a card
+   with no prototype, so nothing here needs its own [hidden] rule. */
+.akproto { margin:0 0 14px; font-size:13px; }
+/* In the action row now, so no margin of its own. It takes the space
+   between the two action clusters — centred, because it belongs to
+   neither of them. */
+.akdates { margin:0; font-variant-numeric:tabular-nums; }
+.akdateslot { flex:1 1 auto; min-width:0; text-align:center; }
+/* Close and Save are one gesture's two endings and sit together; Delete is
+   the opposite of both, so the row splits rather than lining all three up
+   and hoping nobody reaches for the wrong end.
+
+   The split itself is declared on `#akdlg .ask-actions` below, NOT here:
+   `dialog.ask .ask-actions` already sets flex-end, and a bare class
+   loses to it. Putting `justify-content` here reads as if it applies and
+   does nothing -- which is how the dates slot ended up doing the job by
+   growing in the middle, and why the row collapsed to the right the
+   moment a narrow screen moved the dates onto their own line. */
+.akactions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; }
+.akactleft, .akactright { display:flex; gap:8px; }
+/* The title line carries the pencil at its right. `min-width:0` is what
+   makes a long title WRAP inside the space that is left rather than
+   pushing the button off the row -- a flex item's default minimum is its
+   content's width, which for a heading is the longest unbroken run. */
+.vtitle { display:flex; align-items:flex-start;
+  justify-content:space-between; gap:12px; }
+.vtitle h3 { flex:1 1 auto; min-width:0; }
+.vtitle .akpencil { margin-top:2px; }
+/* display:flex above beats the browser's own [hidden] rule -- the same
+   trap .akftoggle, .akfield and .akq carry. Without it the pencil would
+   stay on screen in edit mode, offering a way back that does not exist. */
+.akpencil[hidden] { display:none; }
+.akfields { display:flex; flex-wrap:wrap; gap:10px 14px; margin:4px 0 14px; }
+.akfield { display:flex; flex-direction:column; gap:4px; flex:1 1 150px;
+  font-size:12px; color:var(--muted); }
+.akfield-wide { flex-basis:100%; }
+/* display:flex above beats the browser's own [hidden] rule, so hiding the
+   row from JS needs this. Without it the shelf's condition shows on every
+   card, including the ones that can never have one. */
+.akfield[hidden] { display:none; }
+/* Same trap, higher stakes: .akdata holds every card's rendered facts and
+   its raw markdown, held back by one attribute. Any display rule that ever
+   lands on it would spill every card's full entry onto the board. */
+.akdata[hidden] { display:none; }
+.akfield input, .akfield select { font:inherit; font-size:13px;
+  color:var(--text); background:var(--bg); padding:7px 9px;
+  border:1px solid var(--border); border-radius:var(--radius-btn); }
+.akfield input:hover, .akfield select:hover { border-color:var(--accent); }
+/* The body field. Box, border, background and focus ring all come from
+   the base `textarea` rules, so this carries only what a source view
+   differs on: monospace at 13px rather than the inherited 14, because
+   the extra size bought nothing but scrolling; 14px of padding, which
+   keeps prose off the rounded corner; and a fixed height, matching the
+   answer boxes so moving between tabs does not resize the dialog. */
+.akeditor { margin-top:4px; padding:14px;
+  font-family:var(--font-mono); font-size:13px; line-height:1.6;
+  caret-color:var(--accent); height:min(46dvh, 420px); }
+.akeditor::placeholder { color:var(--muted); }
+
+/* The tab strip. No rounded tab shapes: at the radius the rest of the
+   board uses, a tab reads as a half circle rather than a tab. Bold and
+   an accent underline carry the active state instead, which needs no
+   shape at all. */
+.aktabs { display:flex; gap:2px; margin:2px 0 14px;
+  border-bottom:1px solid var(--border); }
+.aktabs[hidden] { display:none; }
+.aktab { appearance:none; font:inherit; font-size:13px; cursor:pointer;
+  display:flex; align-items:center; gap:7px; padding:8px 12px;
+  color:var(--muted); background:transparent; border:none;
+  border-bottom:2px solid transparent; margin-bottom:-1px; }
+.aktab:hover { color:var(--accent); }
+.aktab[aria-selected="true"] { color:var(--text);
+  border-bottom-color:var(--accent); }
+.aktab[aria-selected="true"] .aktabt { font-weight:600; }
+/* Bold is wider than regular, so a tab going bold would push every tab
+   after it along. Each label reserves its own bold width with a hidden
+   copy of itself stacked in the same grid cell, and the row stops
+   moving. */
+.aktabt { display:grid; }
+.aktabt::after { content:attr(data-label); font-weight:600; height:0;
+  overflow:hidden; visibility:hidden; pointer-events:none; }
+.aktabt, .aktabt::after { grid-area:1 / 1; }
+/* Unanswered. The dot is the tab's whole reason to stand out, so it
+   keeps the accent even on a tab that is not selected. */
+.aktabdot { width:7px; height:7px; border-radius:50%;
+  background:var(--accent); flex:0 0 auto; }
+
+/* The question list sits above the body editor: answering is the reason
+   the modal was opened when there is anything here to answer. */
+.akqlist { display:flex; flex-direction:column; gap:12px;
+  margin-bottom:14px; }
+/* display:flex above beats the browser's own [hidden] rule, same trap as
+   .akfield -- a display value on an element always wins over the UA
+   hidden rule, so any element given one has to re-assert [hidden] itself
+   or JS setting .hidden on it does nothing. */
+.akqlist[hidden] { display:none; }
+.akq { display:flex; flex-direction:column; gap:5px; }
+/* display:flex above beats the browser's own [hidden] rule -- the same
+   trap .akqlist and .akfield carry. Without this a hidden pane stays on
+   screen and every question shows at once. */
+.akq[hidden] { display:none; }
+.akqhead { display:flex; align-items:center; gap:7px;
+  font-weight:600; color:var(--text); }
+/* font:inherit takes the weight too, and .akq is a <label>, which the
+   global label rule sets to 600 -- so the owner typed their answers in
+   semibold. The heading inside that label is legitimately 600, so the
+   correction belongs here and not on .akq. */
+.akqbox { width:100%; resize:vertical; font:inherit; font-weight:400;
+  color:var(--text);
+  background:var(--bg); border:1px solid var(--border);
+  border-radius:var(--radius); padding:8px 10px; }
+/* In a tab the question owns the whole pane, so its box takes the room
+   the editor takes on Details. Matching that height is also what stops
+   the dialog resizing as you move between tabs — a three-row box under a
+   heading collapsed the modal to a third of its height on every click,
+   which is the cramped shape the tabs were added to replace. */
+.akq .akqbox { height:min(46dvh, 420px); }
+/* With tabs the dialog's height would follow whichever pane is showing,
+   so every tab click moved the Save row under the cursor. Fixing the
+   height once removes the jump, and the panes then stretch into it
+   rather than leaving the slack at the bottom. */
+#akdlg.aktabbed { height:min(86dvh, 780px); }
+#akdlg.aktabbed .akscroll { display:flex; flex-direction:column; }
+/* grow, never shrink. `1 1 auto` let a pane be squeezed below its own
+   content, and the answer box — which has a floor and cannot give way —
+   then spilled out of the pane and ended flush against the scroller's
+   clip edge, where its focus ring was sheared off. Refusing to shrink
+   makes the pane grow past the scroller instead, which is what a
+   scroller is for. */
+#akdlg.aktabbed #akqlist, #akdlg.aktabbed .akq { flex:1 0 auto; }
+#akdlg.aktabbed .akq .akqbox { flex:1 1 auto; height:auto; min-height:120px; }
+/* The outcome pane: prose to read, not a field. `akprose` carries
+   the reading styles, so this only needs room to breathe. No `display`
+   here on purpose — the moment one lands, `[hidden]` stops working and
+   the pane shows on every card, which is the trap .akfield, .akqlist and
+   .akq each fell into. */
+.akoutcome { margin-top:2px; }
+
+/* The action row on a phone. `dialog.ask` stacks its buttons full width,
+   which is right for a two-button confirm and wrong here: three stacked
+   bars made Delete the largest thing on the screen, which is backwards
+   for the one action that cannot be undone. One row instead, with the
+   dates taking their own line above it rather than being squeezed
+   between the two groups, and Delete as an outline — still unmistakably
+   the destructive one, no longer the loudest. */
+@media (max-width:520px) {
+  #akdlg .ask-actions { flex-direction:row; flex-wrap:wrap; }
+  #akdlg .ask-actions .btn { width:auto; min-width:0; }
+  #akdlg .akdateslot { flex:1 1 100%; order:-1; text-align:left;
+    margin-bottom:10px; }
+  #akdlg .ask-actions .btn.danger { background:transparent;
+    color:var(--danger); border:1px solid var(--danger); }
+}
+
+/* ── quick add ──────────────────────────────────────────────────────────
+   One row: a box and a Create, nothing else. align-items:stretch is what
+   matches their heights — the button's padding sets the row height and
+   the input grows to it, so the two cannot drift apart when .btn's
+   padding changes. */
+#aknew.akquick { max-width:min(520px, 92vw); }
+.akquickrow { display:flex; align-items:stretch; gap:8px; }
+.akquickrow input { flex:1 1 auto; min-width:0; font:inherit;
+  font-size:14px; color:var(--text); background:var(--bg);
+  padding:0 12px; border:1px solid var(--border);
+  border-radius:var(--radius-btn); }
+.akquickrow input:focus-visible { outline:2px solid var(--accent);
+  outline-offset:1px; }
+.akquickrow .btn { flex:0 0 auto; }
+/* The one confirmation the quick-add needs. On every page but /amik
+   there is no board on screen, so a successful add would otherwise look
+   exactly like a dropped keystroke. */
+.akquickdone { margin:10px 2px 0; }
+.akquickdone[hidden] { display:none; }
+.akquickrow[hidden] { display:none; }
+
+/* On a phone the row cannot stay a row. `dialog.ask .btn { width:100% }`
+   is this dialog family's mobile idiom, and it reaches every .btn inside
+   the dialog — including this one, where a full-width button in a flex
+   row leaves the input its min-width, which is one character. Two rows
+   instead, which is what a full-width button was asking for anyway, and
+   the button keeps that width rather than fighting a rule that outranks
+   this selector.
+   Stacked, the input has no neighbour to match, so align-items:stretch
+   no longer sets its height — the vertical padding here is what keeps
+   the two boxes the same size, and it has to be re-matched by hand if
+   .btn's padding moves. */
+@media (max-width:520px) {
+  .akquickrow { flex-direction:column; }
+  .akquickrow input { flex:0 0 auto; padding:10px 12px; }
+}
+
+/* Planning, Area and Status are three answers to one question — where
+   does this card stand — so they sit as a row rather than a stack. They
+   wrap on a narrow screen like any other field. */
+.akf-trio .akfield { flex:1 1 150px; min-width:0; }
+
+/* Planning, Area and Status are three answers to one question, and the
+   title is a sentence — but `.akf-trio .akfield`'s shorthand resets every
+   basis it reaches, including the 100% a wide field asks for. That left
+   the title sharing a row with them: a third of the dialog on a desktop
+   and half of it on a phone, which is the width of a filename and not of
+   a title. Same specificity as the rule it corrects, and after it. */
+.akf-trio .akfield-wide { flex-basis:100%; }
+
+/* Handling toggles, and the pencil that opens the form they sit in. Off
+   is an outline — an instruction not yet taken; on is filled, because by
+   then it is a fact about the card. Sized to the selects beside them so
+   the row reads as one control strip, and the pencil takes the same box
+   so the modal has one square-icon-button and not two. */
+.akftoggles { display:flex; align-items:flex-end; gap:6px; }
+.akftoggle, .akpencil { display:flex; align-items:center;
+  justify-content:center;
+  width:32px; height:32px; padding:0; border:1px solid var(--border);
+  border-radius:8px; background:transparent; color:var(--muted);
+  cursor:pointer; }
+.akftoggle svg, .akpencil svg { display:block; }
+.akftoggle:hover, .akpencil:hover { border-color:var(--accent);
+  color:var(--accent); }
+/* A flex item shrinks below its own width before its neighbour wraps, so
+   a long chip row would squeeze the square into a slot. */
+.akpencil { flex:0 0 auto; }
+.akftoggle[aria-pressed="true"] { background:var(--accent);
+  border-color:var(--accent); color:var(--bg); }
+.akftoggle[disabled] { opacity:.55; cursor:default; }
+/* display:flex beats the browser's own [hidden] rule -- the same trap
+   .akfield, .akqlist and .akq carry. Without it the toggle and its link
+   would both show, side by side, on every card that has a prototype. */
+.akftoggle[hidden] { display:none; }
+/* The link form of the prototype control: same box, but it has a word in
+   it, so it sizes to the word instead of to the square. */
+.akftlink { width:auto; gap:7px; padding:0 11px; text-decoration:none;
+  font-size:12px; letter-spacing:.04em; text-transform:uppercase; }
+.akftlink:hover { border-color:var(--accent); color:var(--accent); }
+/* A fact in the control strip rather than a control: same box, no hover
+   response, nothing to click. */
+.akftfact { cursor:default; text-transform:none; letter-spacing:0;
+  font-family:var(--font-mono); font-size:11px; }
+.akftfact:hover { border-color:var(--border); color:var(--muted); }
+
+/* A question's context: the asker's words, above the owner's box. Quoted
+   rather than boxed — it is prose to read, and a second bordered block
+   beside a textarea reads as a second thing to fill in. */
+.akqctx-view { border-left:2px solid var(--border); padding:2px 0 2px 10px;
+  margin:6px 0 8px; color:var(--muted); font-size:13px; font-weight:400;
+  line-height:1.5; }
+.akqctx-view div:empty { height:6px; }
+
+/* The board's status line. Closed by default: the branch is the answer
+   most of the time, and the log is there for the times it is not. Both
+   the UA marker AND ::marker are suppressed — the two mechanisms
+   browsers use for a <summary> triangle — so the chip layout is never
+   pushed sideways by a leftover glyph in any engine. */
+/* The bar under the header: the branch and what green means, each a
+   pill that opens its own panel. A row rather than one disclosure,
+   because a control nested inside another summary would be a button
+   inside a button, and the two facts are unrelated -- a project with no
+   repository still has a verify command, and a repository with no
+   verify still has a branch. */
+.akbar { display:flex; flex-wrap:wrap; align-items:flex-start;
+  gap:8px 16px; margin:0 0 10px; }
+.akbar > details { margin:0; }
+.akgit { margin:0 0 10px; }
+.akgit summary { cursor:pointer; display:flex; align-items:center;
+  gap:8px; list-style:none; }
+.akgit summary::-webkit-details-marker { display:none; }
+.akgitlog { margin:8px 0 0; padding:0 0 0 2px; list-style:none;
+  font-size:13px; color:var(--muted); }
+.akgitlog li { padding:2px 0; }
+.akgitlog code { color:var(--accent); margin-right:6px; }
+
+/* What green means here, and what it last said. NOT a test count: the
+   pill reports Amik's own verify run, which is the only thing it can
+   know without recognising one project's test runner from another. */
+.akverifybox summary { cursor:pointer; display:flex; align-items:center;
+  gap:8px; list-style:none; }
+.akverifybox summary::-webkit-details-marker { display:none; }
+.akverify { border-color:var(--border); }
+/* Greyed, and it is the undeclared state rather than a failing one --
+   a red pill on a project that has simply not said what to run would
+   report a broken suite where there is no suite. */
+.akverifynone { color:var(--muted); border-style:dashed; opacity:.75; }
+.akverifypanel { margin:8px 0 0; padding:0 0 0 2px; font-size:13px;
+  max-width:60ch; }
+.akverifypanel p { margin:4px 0; }
+.akverifypanel code { color:var(--accent); }
+.akverifytail { margin:6px 0 0; padding:8px 10px; font-size:12px;
+  color:var(--muted); background:var(--surface, transparent);
+  border:1px solid var(--border); border-radius:8px;
+  white-space:pre-wrap; overflow-x:auto; }
+

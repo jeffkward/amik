@@ -1,0 +1,60 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "amik"
+version = "0.1.0"
+description = "A kanban board that lives in your repository, and an agent that works it"
+readme = "README.md"
+# NOT a preference: `tomllib` is stdlib from 3.11 and the reader imports
+# it. Declaring less than this installs cleanly and fails on the first
+# config read.
+requires-python = ">=3.11"
+# PEP 639: an SPDX expression, with the file named separately.
+# The old `{ file = ... }` table and the matching classifier are
+# both deprecated and stop building in Feb 2027 -- not something
+# a repository should ship on its first day.
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Jeff Ward" }]
+keywords = ["kanban", "agents", "git", "board"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "Environment :: Web Environment",
+  "Intended Audience :: Developers",
+  "Programming Language :: Python :: 3",
+  "Topic :: Software Development :: Version Control :: Git",
+]
+# One. The engine and the loop are stdlib -- a test pins that -- and
+# this is the board's renderer.
+dependencies = ["jinja2>=3.1"]
+
+# Installing it puts `amik` on the PATH, which is the whole of the
+# "getting amik onto a PATH" problem, answered as a side effect of
+# packaging rather than as a shell alias somebody has to remember.
+[project.scripts]
+amik = "amik.__main__:main"
+
+[tool.setuptools.packages.find]
+include = ["amik*"]
+
+# Templates and static files are DATA, not modules, so nothing includes
+# them automatically. A wheel without them installs cleanly and then
+# fails at the first request with a TemplateNotFound -- which is the
+# worst possible place to discover a packaging mistake.
+[tool.setuptools.package-data]
+amik = ["app/templates/*.html", "app/static/*", "starter/board.jsonl",
+        "starter/cards/*.md", "starter/*.example"]
+
+# Installing the test extra is how you run the suite:
+#   pip install -e ".[dev]" && pytest
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+
+[tool.pytest.ini_options]
+testpaths = ["amik/tests"]
+# The suite's helpers import as `tests.<module>`, which needs `amik/` on
+# the path — it was the rootdir when the package WAS the repository.
+# One line here rather than rewriting the import in thirteen files.
+pythonpath = ["amik"]

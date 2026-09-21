@@ -1,0 +1,25 @@
+{# The global quick-add. Included by base.html on EVERY page, but only on
+   an instance that has a board — same predicate that 404s /amik, so a
+   ported instance carries none of this rather than hiding it.
+
+   One row and nothing else: no heading, no instructions, no Cancel.
+   Escape is the dialog's own way out and needs no button. #}
+<dialog id="aknew" class="ask akquick">
+  <div class="akquickrow">
+    {# aria-label because there is no visible label to name it. #}
+    <input id="aknew-title" type="text" autocomplete="off"
+           aria-label="Title of the new item" placeholder="Type…">
+    <button class="btn primary" id="aknew-go">Create</button>
+  </div>
+  {# Shown for a beat after a create, because on every page but /amik
+     there is no board on screen to show the new card appearing. #}
+  <p class="akquickdone meta" id="aknew-done" hidden>Added to Inbox.</p>
+</dialog>
+{# `static()`, not a hardcoded path. This read `/amik/static/...`
+   until 2026-09-20, which is right only when a host happens to have
+   mounted the board at `/amik` -- the shape it was extracted from.
+   Served standalone the file 404s, `window.amikQuickAdd` is never
+   defined, and the + on Inbox does nothing at all with no error on
+   screen. The helper builds the prefix the board was actually
+   mounted at, and carries the cache-busting stamp besides. #}
+<script src="{{ static('quickadd.js') }}"></script>

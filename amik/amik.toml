@@ -1,0 +1,143 @@
+# Amik reads this file to learn about your project. Rename it to
+# `amik.toml` — or let `amik init` do that for you.
+#
+# Everything here is optional except `verify` and `[agent] command`,
+# and those two only matter if you want an agent to work your cards.
+# A board with neither is still a board.
+#
+# ── ONE RULE ABOUT THE SHAPE OF THIS FILE ───────────────────────────
+# Every plain key comes FIRST, and every [table] comes after. A TOML
+# table header captures every key written below it, so `armed = true`
+# placed under `[loop]` becomes `loop.armed` — which reads as absent,
+# which means false, which silently turns the board off with nothing
+# failing anywhere. Keep the halves apart and it cannot happen.
+
+
+# ── plain keys ───────────────────────────────────────────────────────
+
+# What this board is called, shown in the middle of the top bar.
+# Absent, the bar has no name there — better than one guessed from a
+# directory, which reads exactly like a name someone chose.
+name = "Amik"
+
+# What "green" means here: a shell command that exits 0 when your
+# project is healthy.
+#
+# NO DEFAULT, on purpose. Guessing a test command is how a loop reports
+# green on nothing, so a project that has not declared this cannot be
+# agent-worked. The board still works; an agent just will not touch it.
+#
+#   verify = "npm test"
+#   verify = "pytest -q"
+#   verify = "cargo test && cargo clippy -- -D warnings"
+# Amik is worked by Amik, so its own suite is what green means.
+#
+# The interpreter is NAMED IN FULL, and that is the same reason the
+# launch agent names its python in full: a card is verified by an
+# unattended process, which is handed almost no PATH, and a bare
+# `pytest` there is either not found or -- worse -- found and the wrong
+# one. A suite that passes under some other interpreter, against some
+# other installed copy of Amik, is a green that means nothing, which is
+# what this key exists to prevent.
+#
+# Relative because `verify` runs with the project root as its working
+# directory. A clone with no `.venv` fails loudly here, which is the
+# correct failure: a project that has not been set up cannot be
+# agent-worked, exactly as one that has declared no verify cannot.
+verify = ".venv/bin/pytest -q"
+
+# What an agent must read before touching anything: your own rules
+# about this codebase. Amik prepends its own laws about the BOARD; this
+# is for everything else.
+#
+#   laws = "CONTRIBUTING.md"
+# The board's laws sit at the repository root beside the README.
+laws = "CLAUDE.md"
+
+# What a card's branch is called. A card `fix-the-header` is worked on
+# `card/fix-the-header`.
+branch = "card/"
+
+# What a card branches FROM and returns TO.
+#
+# Absent, Amik works it out — the remote's default, then a local `main`,
+# then a local `master` — and refuses rather than guessing if none of
+# those answer. Saying it outright makes a future rename one line.
+#
+#   
+# Whether an agent may work this board unattended.
+#
+# True, because it is not the gate that matters: `verify` and the agent
+# command both refuse until you declare them, so nothing can run before
+# you have said what runs your cards and how you check them. Telling
+# Amik those two things IS saying yes.
+#
+# This is the kill switch. Set it false and the next tick stops, without
+# deleting the configuration you will want back. It is re-read every
+# tick, so there is no process to restart.
+armed = true
+
+
+# ── tables ───────────────────────────────────────────────────────────
+
+[agent]
+# What works a card. The prompt goes to this command's standard input,
+# so the flags here are only about capability and isolation — every CLI
+# has stdin, and no two spell a prompt the same way.
+#
+# NO DEFAULT. Amik names no vendor: a project that has not said what
+# works its cards has not said.
+#
+#   command = "claude -p --allowedTools Read,Write,Edit,Bash"
+#   command = "codex exec"
+#   command = "npx -y opencode-ai@1.4.7 run --auto"
+# --setting-sources project: user-level plugins are structurally
+#   excluded from an unattended turn. A plugin hook hijacked one once.
+# --allowedTools: capability rides the invocation rather than a
+#   settings file, and every tool named is one a card genuinely needs —
+#   read the repo, change it, run verify, commit. An unattended run
+#   that hits a permission prompt does not fail, it HANGS, which is
+#   worse.
+# --output-format stream-json --verbose is what makes [loop] transcript
+#   worth having: without it stdout carries only the agent's final
+#   message, and the log records the summary you already have.
+command = "claude -p --output-format stream-json --verbose --setting-sources project --allowedTools Read,Write,Edit,Glob,Grep,Bash"
+
+[loop]
+# How many cards one firing may work. 0 is no limit.
+ceiling = 0
+
+# Run after a card is worked, with a one-line summary on argv. Absent
+# means silent — a tool that insists on telling you things has to be
+# told how.
+#
+#   notify = "gidoon send myproject"
+notify = ""
+
+# Keep the agent's raw output beside the board. Large, and nothing
+# prunes them yet -- worth it while the loop is young and a run months
+# old may need reading.
+transcript = true
+
+[state]
+# Paths a card's branch must not own: anything in your tree written by
+# something OTHER than the work on a card — a daemon, a watcher, a sync
+# client.
+#
+# Absent means nothing is shared, which is right for almost every
+# project. Amik does not know what these are; it knows only that a
+# branch may not take them hostage.
+#
+#   shared = ["data/live", "state/*.json"]
+
+# Of those, the ones that change on their own schedule, so that no card
+# is ever blamed for them.
+#
+#   churn = ["state/*.json"]
+
+[prototypes]
+# Stylesheets injected into a design pass, so it looks like the
+# application it is prototyping without anyone editing the file.
+# Root-relative.
+#
+#   assets = ["/static/app.css"]

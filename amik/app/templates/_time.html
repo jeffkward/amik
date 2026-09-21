@@ -1,0 +1,22 @@
+{# Relative time with its exact timestamp on hover. The compact label
+   ("1m" / "14h" / "15d" / "3mo" / "2y") comes from the time_ago filter; the
+   tooltip's full date comes from human_dt. Both are registered filters in
+   app.py — this macro is named `timestamp` rather than `time_ago` so it does
+   not collide with the filter it uses.
+
+   The label is ALWAYS the bare compact form. Nothing trails it - not here,
+   not in surrounding prose.
+
+   A native title="" would work but reads inconsistently across browsers and
+   cannot be themed; base.html's shared hover handler picks these up by the
+   .time-ago class + data-exact attribute pair.
+
+     value        ISO timestamp string. NOT a pre-computed age.
+     cls          extra classes on the element (e.g. "src", "sd-age")
+     href         render an <a> to this target instead of a <span>
+     exact_prefix text before the date in the tooltip (e.g. "Last edited ") #}
+{% macro timestamp(value, cls='', href=none, exact_prefix='') -%}
+{%- if href -%}<a href="{{ href }}" class="time-ago{{ ' ' ~ cls if cls }}" data-exact="{{ exact_prefix }}{{ value | human_dt }}">{{ value | time_ago }}</a>
+{%- else -%}<span class="time-ago{{ ' ' ~ cls if cls }}" data-exact="{{ exact_prefix }}{{ value | human_dt }}">{{ value | time_ago }}</span>
+{%- endif -%}
+{%- endmacro %}

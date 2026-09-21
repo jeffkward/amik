@@ -1,0 +1,38 @@
+# Amik's runtime state. In THIS folder rather than the repository root,
+# so it travels when the folder is copied into another project — an
+# ignore rule left behind is a lock file committed on someone else's
+# first run.
+
+# Who is working a card right now. Machine-local by definition: a pid
+# from another machine means nothing, and a committed lock would tell
+# every checkout that a card is being worked forever.
+.lock
+
+# Where the board stood when the loop last looked. A cursor, not a
+# record — deleting it costs one redundant pass and nothing else.
+.seen
+
+# The agent's raw output, when [loop] transcript is on. A transcript is
+# every file the agent read, which is exactly what should not be
+# committed by default.
+runs/
+
+# A card's design pass. Transient by design -- its lifetime is its
+# card's -- and TRACKING one puts it on a single branch where every
+# other branch cannot see it, which is the whole reason a prototype
+# went missing and a branch switcher got proposed to find it.
+#
+# Nothing in git removes these now, so `edit.discard_prototype` is the
+# only mechanism there is and every close path calls it.
+prototypes/
+
+# Working notes, not documentation. Parked seeds and an agent-landscape
+# survey — neither finished enough to publish nor useless enough to
+# delete. Revisit when this repository has a docs story.
+/SOMEDAY.md
+/RESEARCH.md
+
+# What the last verify said. A cursor, not a record: a result from
+# another machine means nothing, and losing it costs one pill reading
+# "not run yet" until the next card lands.
+.verify

@@ -1,0 +1,51 @@
+# The REPOSITORY's own ignores. `amik/.gitignore` is a different file
+# with a different job: it travels with the folder into any project that
+# copies it, so the runtime rules live there and not here.
+
+.venv/
+__pycache__/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+
+# Working notes, not documentation. Parked seeds and an agent-landscape
+# survey -- neither finished enough to publish nor useless enough to
+# delete. Revisit when this repository has a docs story.
+/SOMEDAY.md
+/RESEARCH.md
+
+# Amik's OWN board, and it is IGNORED -- the opposite of what this
+# block said until 2026-09-19, when the repository acquired a remote it
+# would be published to.
+#
+# This directory is two things at once: the tool, and one board being
+# worked with it. As the tool it ships `amik/starter/`, which is the
+# template and the only copy anyone needs. As a board it holds whoever
+# is working here and what they are thinking about next, which is
+# theirs and not the project's.
+#
+# So the board joins the rest of the runtime state `amik/.gitignore`
+# already hides -- the lock, the seen cursor, the transcripts, the
+# prototypes. It was the last piece still tracked, and it was tracked
+# only to demonstrate Amik being built with Amik, which cannot coexist
+# with a board that is private. The README carries that instead.
+#
+# A fresh clone has no board, which is correct: `amik serve` writes one
+# from the starter on first run, the same way any other project gets
+# one. A clone that HAD one could not, because seeding refuses an
+# instance that already has a board.
+#
+# This is about THIS repository, which is why it is here and not in
+# `amik/.gitignore`. A project that adopts Amik should track its board:
+# a board that lives in your repository is the whole premise, and
+# nothing copies this file into one.
+amik/board.jsonl
+amik/cards/
+
+# The agent's raw output from a run, when [loop] transcript is on.
+# Every file it read, which is exactly what should not be committed.
+amik/runs/
+
+# The board's own history, which travels with the board it describes.
+amik/log.jsonl

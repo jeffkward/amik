@@ -1,0 +1,78 @@
+{# One card's full entry, hidden. The modal is filled from this rather
+   than rebuilt in JavaScript: the dates need the timestamp macro, which
+   is Jinja no script can call.
+
+   Served by `GET /cards/{id}` and fetched when a card opens. It used to
+   be rendered once per card into every page load, which was 703 KB of a
+   768 KB page to open one card at a time.
+
+   `timestamp` is imported HERE rather than inherited from the page: this
+   template is also rendered on its own, where the page's imports do not
+   exist. #}
+{% from "_time.html" import timestamp %}
+<div class="akdata" hidden
+     data-title="{{ c.title }}" data-id="{{ c.id }}"
+     data-status="{{ c.status }}"
+     data-planning="{{ c.planning or '' }}"
+     data-group="{{ c.group or '' }}"
+     data-requires-prototype="{{ 'true' if c.requires_prototype else 'false' }}"
+     data-halt="{{ 'true' if c.halt else 'false' }}"
+     data-branch="{{ c.branch or '' }}">
+
+  {# The prototype's own lifetime is the card's — present while the card
+     is not done, gone once an agent has deleted the directory. Rendered
+     here, not shown here: the modal clones this into #akprotoslot on
+     open, the same way it lifts .akdates. #}
+  {% if c.has_prototype %}
+  <p class="akproto"><a href="{{ url('/cards/' ~ c.id ~ '/prototype') }}"
+     target="_blank" rel="noopener">View prototype</a></p>
+  {% endif %}
+
+  {# Nothing renders above the body any more. The facts that used to sit
+     here were either the modal's own editable fields said twice, or
+     reference data (parent, docs, commits) that belongs in the prose
+     where it can be read and edited rather than in a strip above it.
+     What remains in this block is what the MODAL reads, not what it
+     shows: the data attributes, the editor's source, and the dates. #}
+  {# What the modal shows while the card is being READ, chips and prose
+     together in one wrapper — so a save replaces both from one string
+     and neither can be repainted without the other. #}
+  <div class="akvsrc">{% include "_cardview.html" %}</div>
+  {# The markdown SOURCE, for the editor: the card's BODY alone. Its
+     Questions and its Outcome have tabs of their own, and a second
+     editable view of one slice of the prose would be a second writer for
+     the same text. A script cannot call the Jinja filter that renders
+     prose, so the raw text rides along. #}
+  <textarea class="akraw" hidden>{{ c.overview }}</textarea>
+  {# One node per question, read by the modal to build its boxes. The
+     heading rides as a data attribute because that is what the writer
+     targets — an index would break the moment a question is added above
+     it. The answer is a textarea for the same reason .akraw is: a script
+     cannot call the Jinja filter that renders prose. #}
+  {% for q in c.questions %}
+  <div class="akqsrc" data-heading="{{ q.heading }}"
+       data-answered="{{ 'true' if q.answered else 'false' }}">
+    <textarea class="akqtext" hidden>{{ q.answer }}</textarea>
+    {# The asker's context, read-only on screen. It rides as text rather
+       than rendered markup for the same reason .akqtext does: a script
+       cannot call the Jinja filter that renders prose. #}
+    <textarea class="akqctx" hidden>{{ q.context }}</textarea>
+  </div>
+  {% endfor %}
+  {# The card's outcome, rendered here because only Jinja can call the
+     markdown filter, then cloned into its own tab on open. Read-only on
+     screen: the whole prose is already editable in the body editor on
+     Details, and a second editable view of one slice of it would be a
+     second writer for the same text. #}
+  {% if c.outcome %}
+  <div class="akoutsrc">{{ c.outcome | chat_md | safe }}</div>
+  {% endif %}
+  {# Lifted out of this block by the modal and dropped below the editor.
+     Rendered here because only Jinja can call the timestamp macro. #}
+  <p class="akdates meta">
+    {% if c.created_at %}Created {{ timestamp(c.created_at,
+      exact_prefix='Created ') }}{% endif %}
+    {% if c.updated_at %} · Updated {{ timestamp(c.updated_at,
+      exact_prefix='Updated ') }}{% endif %}
+  </p>
+</div>

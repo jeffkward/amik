@@ -1,0 +1,7 @@
+{"id": "this-card-is-worked-by-moving-it-to-ready", "title": "this card is worked by moving it to ready", "status": "todo", "planning": null, "rank": 1, "created_at": "2026-09-18T00:00:00", "updated_at": "2026-09-18T00:00:00"}
+{"id": "this-card-asks-you-a-question", "title": "this card asks you a question", "status": "todo", "planning": null, "rank": 2, "created_at": "2026-09-18T00:00:00", "updated_at": "2026-09-18T00:00:00"}
+{"id": "this-card-creates-a-prototype", "title": "this card creates a prototype", "status": "todo", "planning": null, "rank": 3, "created_at": "2026-09-18T00:00:00", "updated_at": "2026-09-18T00:00:00", "halt": true, "requires_prototype": true}
+{"id": "this-card-pauses-everything-below-it", "title": "this card pauses everything below it", "status": "todo", "planning": null, "rank": 4, "created_at": "2026-09-18T00:00:00", "updated_at": "2026-09-18T00:00:00", "halt": true}
+{"id": "this-card-is-in-ready-but-cannot-be-built", "title": "this card is in ready but cannot be built", "status": "ready", "planning": "needs-brainstorm", "rank": 1, "created_at": "2026-09-18T00:00:00", "updated_at": "2026-09-18T00:00:00"}
+{"id": "this-card-is-not-worth-doing", "title": "this card is not worth doing", "status": "review", "planning": null, "rank": 1, "created_at": "2026-09-18T00:00:00", "updated_at": "2026-09-18T00:00:00"}
+{"id": "this-card-is-already-done", "title": "this card is already done", "status": "done", "planning": null, "rank": 1, "created_at": "2026-09-18T00:00:00", "updated_at": "2026-09-18T00:00:00"}

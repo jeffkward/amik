@@ -1,0 +1,37 @@
+{% from "_icons.html" import i_pause, i_branch, i_prototype %}
+{# The card's own facts, as the modal shows them while it is being read.
+
+   Every value is the reader's own derivation — the same `planning_chip`
+   and `blocking` the card face draws from — so a card and its modal
+   cannot disagree about what it says.
+
+   Status leads. It is the column you clicked from, which is why the card
+   face carries no such chip; but a dialog covers the board it came from,
+   and there it is the one fact the page has otherwise dropped.
+
+   The handling icons appear only when they are ON, the same law every
+   chip on this board keeps: a chip says something is TRUE of this card.
+   In the form beside them the same three glyphs are instructions; here
+   they are facts, so each carries its meaning in a tooltip rather than
+   restating the toggle's label. #}
+<span class="akchips akvchips">
+  <span class="chip akstatus">{{ c.status_label }}</span>
+  {% if c.planning_chip %}<span class="chip akplan{{ ' akblocking'
+    if c.blocking }}">{{ c.planning_chip }}</span>{% endif %}
+  {% if c.group %}<span class="chip akgrp">{{ c.group }}</span>{% endif %}
+  {% if c.halt %}<span class="chip akhandling tip"
+    data-tip="Lands in Review and pauses the queue behind it."
+    >{{ i_pause() }}<span class="akchiplabel">pause</span></span>{% endif %}
+  {# Once the design pass EXISTS the chip stops describing an intention
+     and becomes the way to look at it -- the same rule the form's toggle
+     keeps, where the control turns into a link to the thing it built.
+     A card being READ is exactly when someone wants to see it, and until
+     now this was reachable only by clicking through to the form. #}
+  {% if c.has_prototype %}<a class="chip akhandling akvproto"
+    target="_blank" rel="noopener"
+    href="{{ url('/cards/' ~ c.id ~ '/prototype') }}"
+    >{{ i_prototype() }}<span class="akchiplabel">View prototype</span></a>
+  {% elif c.requires_prototype %}<span class="chip akhandling tip"
+    data-tip="A design pass comes first, and it pauses for a look."
+    >{{ i_prototype() }}<span class="akchiplabel">prototype</span></span>{% endif %}
+</span>

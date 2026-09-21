@@ -1,0 +1,13 @@
+{# The modal's view of one card: its chips, and its prose as PROSE.
+
+   Rendered into the card's data block and cloned into the dialog on
+   open, the same way the dates and the outcome are — and rendered again
+   by a save, as one string, so both halves come back together and
+   neither can be repainted without the other.
+
+   The body EXCLUDES the sections with tabs of their own. The boundary is
+   the reader's, shared with the writer that puts an edited body back;
+   nothing here decides where it falls. #}
+{% include "_viewchips.html" %}
+{% if c.overview %}<div class="akbodysrc">{{ c.overview | chat_md | safe }}</div>
+{% endif %}

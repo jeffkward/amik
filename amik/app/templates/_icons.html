@@ -1,0 +1,48 @@
+{# The board's icons. Inline SVG inheriting `currentColor`, so a
+   state comes from the element around them and never from a
+   second copy of the glyph. #}
+
+{% macro i_plus() %}<svg width="11" height="11" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M8 3.2v9.6"/><path d="M3.2 8h9.6"/></svg>{% endmacro %}
+
+{# The brand mark is the 🦫 emoji, and it lives in board.html rather than
+   here: these macros are all `currentColor` line art, and an emoji is a
+   coloured glyph the page cannot tint. #}
+
+{# Stroked as well as filled, with a round join: a bare triangle's three
+   points are needle-sharp beside the pause bars' rounded rectangles. #}
+{% macro i_play() %}<svg viewBox="0 0 16 16" width="15" height="15"
+  fill="currentColor" stroke="currentColor" stroke-width="1.4"
+  stroke-linejoin="round" aria-hidden="true"><path d="M5.6 3.7 12.2 8
+  5.6 12.3Z"/></svg>{% endmacro %}
+
+{% macro i_pause() %}<svg viewBox="0 0 16 16" width="15" height="15"
+  fill="currentColor" aria-hidden="true"><rect x="4" y="3" width="3"
+  height="10" rx="1"/><rect x="9" y="3" width="3" height="10" rx="1"/>
+  </svg>{% endmacro %}
+
+{% macro i_branch() %}<svg viewBox="0 0 16 16" width="15" height="15"
+  fill="none" stroke="currentColor" stroke-width="1.6"
+  stroke-linecap="round" aria-hidden="true"><circle cx="4" cy="3.5" r="1.6"
+  /><circle cx="4" cy="12.5" r="1.6"/><circle cx="12" cy="6" r="1.6"/>
+  <path d="M4 5.1v5.8M5.6 3.5H9a1.4 1.4 0 0 1 1.4 1.4"/></svg>{% endmacro %}
+
+{% macro i_prototype() %}<svg viewBox="0 0 16 16" width="15" height="15"
+  fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"
+  ><rect x="2.5" y="3" width="11" height="9" rx="1.5"/><path d="M2.5 6h11"
+  stroke-dasharray="2 2"/></svg>{% endmacro %}
+
+{# The one way from reading a card to writing it. A nib and its stroke,
+   not a filled blob: it sits beside the chip row's line art. #}
+{% macro i_pencil() %}<svg viewBox="0 0 16 16" width="15" height="15"
+  fill="none" stroke="currentColor" stroke-width="1.5"
+  stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"
+  ><path d="M11.1 2.4 13.6 4.9 5.9 12.6l-3.3.8.8-3.3z"/><path
+  d="M9.6 3.9 12.1 6.4"/></svg>{% endmacro %}
+
+{% macro i_agent() %}<svg viewBox="0 0 16 16" width="13" height="13"
+  fill="none" stroke="currentColor" stroke-width="1.5"
+  stroke-linejoin="round" aria-hidden="true"><rect x="2.5" y="5.5"
+  width="11" height="8" rx="2"/><path d="M8 2.5v3"/><circle cx="8" cy="2"
+  r="1" fill="currentColor" stroke="none"/><circle cx="5.8" cy="9.3" r=".9"
+  fill="currentColor" stroke="none"/><circle cx="10.2" cy="9.3" r=".9"
+  fill="currentColor" stroke="none"/></svg>{% endmacro %}

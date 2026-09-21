@@ -1,0 +1,198 @@
+# Amik reads this file to learn about your project. Rename it to
+# `amik.toml` — or let `amik init` do that for you.
+#
+# Everything here is optional except `verify` and `[agent] command`,
+# and those two only matter if you want an agent to work your cards.
+# A board with neither is still a board.
+#
+# ── ONE RULE ABOUT THE SHAPE OF THIS FILE ───────────────────────────
+# Every plain key comes FIRST, and every [table] comes after. A TOML
+# table header captures every key written below it, so `armed = true`
+# placed under `[loop]` becomes `loop.armed` — which reads as absent,
+# which means false, which silently turns the board off with nothing
+# failing anywhere. Keep the halves apart and it cannot happen.
+
+
+# ── plain keys ───────────────────────────────────────────────────────
+
+# What this board is called, shown in the middle of the top bar.
+# Absent, the bar has no name there — better than one guessed from a
+# directory, which reads exactly like a name someone chose.
+name = "My Board"
+
+# What "green" means here: a shell command that exits 0 when your
+# project is healthy.
+#
+# NO DEFAULT, on purpose. Guessing a test command is how a loop reports
+# green on nothing, so a project that has not declared this cannot be
+# agent-worked. The board still works; an agent just will not touch it.
+#
+#   verify = "bun run test"
+#   verify = "npm test"
+#   verify = "pytest -q"
+verify = ""
+
+# What an agent must read before touching anything: your own rules
+# about this codebase. Amik prepends its own laws about the BOARD; this
+# is for everything else.
+#
+# Preloaded with CLAUDE.md, because a project that reaches for this
+# usually has one and a file that is not there costs nothing: the brief
+# simply carries Amik's own laws and no others.
+#
+#   laws = "CONTRIBUTING.md"
+laws = "CLAUDE.md"
+
+# What a card's branch is called. A card `fix-the-header` is worked on
+# `card/fix-the-header`.
+branch = "card/"
+
+# What a card branches FROM and returns TO.
+#
+# Absent, Amik works it out — the remote's default, then a local `main`,
+# then a local `master` — and refuses rather than guessing if none of
+# those answer. Saying it outright makes a future rename one line.
+#
+#   trunk = "main"
+
+# Whether an agent may work this board unattended.
+#
+# True, because it is not the gate that matters: `verify` and the agent
+# command both refuse until you declare them, so nothing can run before
+# you have said what runs your cards and how you check them. Telling
+# Amik those two things IS saying yes.
+#
+# This is the kill switch. Set it false and the next tick stops, without
+# deleting the configuration you will want back. It is re-read every
+# tick, so there is no process to restart.
+armed = true
+
+
+# ── tables ───────────────────────────────────────────────────────────
+
+[agent]
+# What works a card. The prompt goes to this command's standard input,
+# so the flags here are only about capability and isolation — every CLI
+# has stdin, and no two spell a prompt the same way.
+#
+# PRELOADED FOR CLAUDE CODE, and it is the one place this tool names a
+# vendor. The principle it breaks -- Amik names no vendor -- lost to
+# what it cost: a fresh install that could not work a card until
+# somebody found the blanks and knew what belonged in them. Most people
+# meeting Amik are already in Claude Code, and an onboarding that works
+# beats one that is even-handed.
+#
+# Change it to anything that reads a prompt on stdin:
+#
+#   command = "codex exec"
+#   command = "npx -y opencode-ai@1.4.7 run --auto"
+#
+# Every flag below earns its place, and a half-flagged command does not
+# fail -- it HANGS, which looks exactly like a board with nothing to do.
+#
+# --allowedTools is the one to get right. Capability rides the
+#   invocation rather than a settings file, and each tool named is one a
+#   card genuinely needs: read the repo, change it, search it, run
+#   verify. Leave Glob or Grep off and the agent asks permission
+#   mid-card with nobody there to answer.
+# --setting-sources project keeps user-level plugins structurally out of
+#   an unattended turn. A plugin hook hijacked one once.
+# --output-format stream-json --verbose is what makes `[loop]
+#   transcript` worth keeping: without it stdout carries only the final
+#   message, which is the summary you already have.
+command = "claude -p --output-format stream-json --verbose --setting-sources project --allowedTools Read,Write,Edit,Glob,Grep,Bash"
+
+[loop]
+# Seconds between looks when a server is working this board.
+#
+# Measured, not guessed: one stat is under a microsecond, so a second's
+# interval is about seventy milliseconds of CPU a day. Raise it on a
+# laptop if you would rather the process idled more deeply; nothing
+# else in here is affected by the number.
+tick = 1
+
+# How many cards one firing may work. 0 is no limit.
+ceiling = 0
+
+# Run after a card is worked, with a one-line summary on argv. Absent
+# means silent — a tool that insists on telling you things has to be
+# told how.
+#
+# The board's `name`, if it has one, leads the line -- so several
+# boards can point at ONE notifier without a second bot, and you can
+# still tell which project spoke.
+#
+#   notify = "gidoon send myproject"
+notify = ""
+
+# WHICH landings are worth being told about. Only read when `notify` is
+# set, and absent it means `review` and `blocked` — the two columns
+# that mean the loop stopped and is waiting on a person. A card that
+# closed itself needs nobody.
+#
+# List more to hear more: "done" for every close, or "ready" for the
+# failures, since a card its agent failed on is put back there.
+#
+# An explicit empty list is silence without deleting the command you
+# will want back. A value that is not a list of strings falls back to
+# the default rather than to silence — the cheap direction of that
+# mistake is hearing about a card you did not need to.
+#
+# Only the loop's OWN moves are announced. Amik reads where a card
+# landed after the agent it spawned returned; it is not watching the
+# board, so dragging a card to `review` by hand tells nobody.
+#
+#   notify_on = ["review", "blocked"]         # the default, written out
+#   notify_on = ["review", "blocked", "done"] # every close as well
+#   notify_on = []                            # quiet, without forgetting
+
+# Keep the agent's raw output beside the board, under `amik/runs/`.
+#
+# ON by default, because the first question anybody asks about a card
+# that went sideways is "what did it actually do", and without this the
+# only answer is the one-line outcome it chose to write. A card that
+# took three minutes and changed something you did not expect is
+# unreadable without the stream.
+#
+# They are large and nothing prunes them yet, so delete `amik/runs/`
+# when it gets heavy. The folder's own ignore rule keeps them out of
+# git either way.
+transcript = true
+
+[state]
+# Paths a card's branch must not own: anything in your tree written by
+# something OTHER than the work on a card — a daemon, a watcher, a sync
+# client.
+#
+# Absent means nothing is shared, which is right for almost every
+# project. Amik does not know what these are; it knows only that a
+# branch may not take them hostage.
+#
+# AMIK'S OWN TWO ARE PRELOADED, and they matter more than they look.
+# The board is card STATE and `cards/` is card PROSE; both belong to the
+# board rather than to any branch. Left unprotected, a card's own close
+# is committed onto that card's branch and becomes invisible the moment
+# the tree returns to the trunk -- so the loop picks up the card it just
+# finished, and does it again.
+#
+# Harmless where the board is ignored, since git has nothing to capture.
+# Load-bearing where it is tracked, which is the setup this tool
+# recommends.
+#
+# Add your own: anything in your tree written by something OTHER than
+# the work on a card -- a daemon, a watcher, a sync client.
+#
+#   shared = ["amik/board.jsonl", "amik/cards", "data/live"]
+shared = ["amik/board.jsonl", "amik/cards"]
+
+# Of those, the ones that change on their own schedule, so that no card
+# is ever blamed for them.
+#
+#   churn = ["state/*.json"]
+
+[prototypes]
+# Stylesheets injected into a design pass, so it looks like the
+# application it is prototyping without anyone editing the file.
+# Root-relative.
+#
+#   assets = ["/static/app.css"]

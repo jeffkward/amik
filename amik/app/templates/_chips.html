@@ -1,0 +1,50 @@
+{% from "_icons.html" import i_branch, i_prototype, i_agent %}
+{# One card's chip row. Included by the board page and rendered on its own
+   by the save route, so the markup has ONE definition and every chip on
+   it stays the reader's derivation rather than a script's guess.
+
+   A chip appears only when something is true of THIS card that is not
+   true of the column it sits in. A blocking rung reads loud; the rest of
+   the ladder is information, not a warning.
+
+   A handling icon has two lives: an instruction while its artifact does
+   not exist (the modal's toggle), a fact once it does (this chip). As a
+   fact it carries the detail in its tooltip rather than restating the
+   toggle. #}
+{% if c.planning_chip or c.conflict or c.question_flag
+      or c.group or c.branch or c.duplicate_question
+      or c.has_prototype or c.working %}
+<span class="akchips">
+  {# Being worked. `doing` is the agent's own column — the owner's pull is
+     `ready`, and an agent moves a card here as it starts — so the column
+     IS the signal and no second field has to be kept true. #}
+  {% if c.working %}<span class="chip akworking tip"
+    data-tip="An agent is working this card.">{{ i_agent()
+    }}<span class="akspin" aria-hidden="true"></span></span>{% endif %}
+  {% if c.conflict %}<span class="chip akconflict tip"
+    data-tip="{{ c.conflict }}">⚠ {{ c.conflict_label }}</span>{% endif %}
+  {% if c.duplicate_question %}<span class="chip akdup"
+    >duplicate question</span>{% endif %}
+  {% if c.question_flag %}<span class="chip akquestion tip"
+    data-tip="{{ c.question_flag }}">{{ c.question_flag_label }}</span>{% endif %}
+  {% if c.planning_chip %}<span class="chip akplan{{ ' akblocking'
+    if c.blocking }}">{{ c.planning_chip }}</span>{% endif %}
+  {% if c.group %}<span class="chip akgrp">{{ c.group }}</span>{% endif %}
+  {# The NAME is the label, not the word "branch": it is the one fact
+     the page carries nowhere else, and a chip these cards cannot make
+     focusable puts its tooltip out of a keyboard's reach. Truncated by
+     CSS with the whole string still in the tooltip, and repeated in the
+     modal, which is reachable. #}
+  {% if c.branch %}<span class="chip akbranch tip"
+    data-tip="{{ c.branch }}">{{ i_branch() }}<span class="akchiplabel"
+    >{{ c.branch }}</span></span>{% endif %}
+  {# Inert by construction, like every other chip on this draggable
+     button-card: the modal is the one way to the prototype, and it
+     already carries a real, working link. An <a> here would nest
+     interactive content inside a native <button> -- invalid, and it
+     would also fight the card's own drag handle. #}
+  {% if c.has_prototype %}<span class="chip akhasproto tip"
+    data-tip="Open the prototype from the card."
+    >{{ i_prototype() }}<span class="akchiplabel">prototype</span></span>{% endif %}
+</span>
+{% endif %}

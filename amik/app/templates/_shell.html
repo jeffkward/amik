@@ -1,0 +1,199 @@
+{# The shell Amik's own script needs.
+
+   `amik.js` calls `ask()` for the delete confirm and the discard-changes
+   prompt, every chip on the board is `.tip[data-tip]`, and the
+   click-outside-to-close handler is delegated at the document so it
+   covers every dialog on the page. In the application Amik grew up in
+   these lived in a shared page shell; here they are Amik's, because
+   standing alone there is nothing else to provide them.
+
+   The tooltip engine carries the part that is easy to lose: an open
+   `<dialog>` sits in the browser's top layer and paints over anything
+   appended to `<body>` at any z-index, so the tip is re-parented into
+   the dialog. Drop that and every tooltip inside the card modal
+   disappears. #}
+<dialog id="askdlg" class="ask">
+  <h3 id="asktitle"></h3>
+  <p id="askbody"></p>
+  {# An optional field, for a confirm that wants a sentence as well as
+     an answer. Hidden unless a caller asks for one — the moment you
+     decide to retry is when you know what went wrong, and asking then
+     beats making someone find a spot afterwards. #}
+  <label id="askfield" hidden>
+    <span id="asklabel" class="fieldlabel"></span>
+    <textarea id="asktext" rows="3"></textarea>
+  </label>
+  <div class="ask-actions">
+    <button class="btn secondary" id="askno">Cancel</button>
+    <button class="btn danger" id="askyes"></button>
+  </div>
+</dialog>
+<script>
+/* ── ask(): the confirm dialog ──────────────────────────────────────────
+   Native <dialog>, no library. showModal() gives the backdrop, ESC, and
+   the focus trap for free, and unlike window.confirm it can be themed,
+   can label its buttons with the actual consequence, and can carry a
+   computed number.
+
+   The deciding reason is subtler: after a few window.confirm()s a browser
+   offers "prevent this page from creating additional dialogs". One click
+   and every safety prompt in the app is silently gone. A confirmation you
+   can permanently disable by accident is not a confirmation.
+
+   Cancel is autofocused so Enter is always the safe answer. */
+const _dlg = document.getElementById('askdlg');
+function ask(title, body, confirmLabel, cancelLabel, prompt) {
+  document.getElementById('asktitle').textContent = title;
+  document.getElementById('askbody').textContent = body;
+  document.getElementById('askyes').textContent = confirmLabel;
+  /* With a `prompt`, the answer is {ok, text}; without one it stays a
+     bare boolean, so every existing caller is untouched. */
+  const field = document.getElementById('askfield');
+  const text = document.getElementById('asktext');
+  document.getElementById('asklabel').textContent = prompt || '';
+  field.hidden = !prompt;
+  text.value = '';
+  /* Two NAMED buttons where the choice is between two real actions
+     rather than between doing a thing and not doing it. Defaulted, so
+     every caller that names only a confirm is unchanged. */
+  document.getElementById('askno').textContent = cancelLabel || 'Cancel';
+  return new Promise(resolve => {
+    const done = ok => {
+      _dlg.close();
+      resolve(prompt ? {ok: ok, text: text.value.trim()} : ok);
+    };
+    _dlg.querySelector('#askyes').onclick = () => done(true);
+    _dlg.querySelector('#askno').onclick  = () => done(false);
+    _dlg.oncancel = () => resolve(prompt ? {ok: false, text: ''}
+                                         : false);   /* ESC */
+    _dlg.showModal();
+    document.getElementById('askno').focus();
+  });
+}
+/* ── click outside a modal to close it ──────────────────────────────────
+   showModal() paints the backdrop as part of the dialog element itself,
+   so a press on the backdrop arrives with the dialog as its target. The
+   target alone cannot tell the backdrop from the dialog's own padding,
+   which reports the same thing — hence the rect comparison rather than
+   an `e.target === dlg` check.
+
+   Press AND release must both land outside. A selection dragged out of a
+   field releases on the backdrop, and dismissing there would throw away
+   the text that was being selected.
+
+   It dispatches `cancel` rather than calling close(), so a dialog that
+   guards unsaved edits on ESC guards them against this gesture too — the
+   card modal's discard prompt is exactly that. One handler for both,
+   never a second copy that can drift.
+
+   Delegated at the document, so the card modal, the quick-add and the
+   confirm are covered without wiring one up per dialog. */
+(function () {
+  let pressedOut = false;
+  const openDialog = e =>
+    e.target instanceof Element ? e.target.closest('dialog[open]') : null;
+  function outside(dlg, e) {
+    const r = dlg.getBoundingClientRect();
+    /* A zero-size rect means the dialog is not laid out; every point
+       counts as inside rather than dismissing on the first click. */
+    if (!r.width || !r.height) return false;
+    return e.clientX < r.left || e.clientX > r.right
+        || e.clientY < r.top || e.clientY > r.bottom;
+  }
+  /* POINTER events, not mouse. A touch on a backdrop is not reliably
+     given the synthesized mousedown/click a mouse gets: those are only
+     dispatched for targets the platform considers interactive, and a
+     dialog's backdrop is neither a link, a button, nor anything carrying
+     cursor:pointer. The gesture worked with a mouse and did nothing
+     under a thumb. Pointer events cover mouse, touch and pen with one
+     listener and no compatibility layer to be excluded from. */
+  document.addEventListener('pointerdown', e => {
+    const dlg = openDialog(e);
+    pressedOut = !!dlg && outside(dlg, e);
+  });
+  document.addEventListener('pointerup', e => {
+    const dlg = openDialog(e);
+    if (!dlg || !pressedOut) return;
+    pressedOut = false;
+    if (!outside(dlg, e)) return;
+    if (dlg.dispatchEvent(new Event('cancel', {cancelable: true})))
+      dlg.close();
+  });
+})();
+/* ── time-ago hover tooltip ─────────────────────────────────────────────
+   Every ".time-ago" label (relative time, wherever a host renders
+   one) shows its exact timestamp
+   on hover — the same floating-card look as the preview above,
+   but synchronous (the exact date is already in data-exact, no fetch),
+   so no spinner state is needed. A native title="" attribute would work
+   too, but reads inconsistently across browsers/OSes and can't be
+   themed — this matches the rest of the app instead. */
+(function () {
+  // Two triggers, one implementation. .time-ago carries a compact label and
+  // its exact date in data-exact; .tip is the general modifier — any element
+  // with data-tip gets the same floating card. Add a tooltip by giving an
+  // element .tip and data-tip, never by widening this selector: a third
+  // trigger here means two class names for one mechanism, drifting apart.
+  const SEL = '.time-ago[data-exact], .tip[data-tip]';
+  let tip = null;
+  function ensureTip(host) {
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.className = 'time-ago-tip';
+      tip.hidden = true;
+    }
+    /* The tip lives WHERE its anchor lives: for an anchor inside an open
+       <dialog> it must be appended to that dialog — showModal() puts the
+       dialog in the top layer, which paints over anything appended to
+       body no matter the z-index. */
+    if (tip.parentNode !== host) host.appendChild(tip);
+    return tip;
+  }
+  function show(el) {
+    const dlg = el.closest('dialog[open]');
+    const t = ensureTip(dlg || document.body);
+    t.textContent = el.dataset.exact || el.dataset.tip;
+    const r = el.getBoundingClientRect();
+    t.hidden = false;                 // measure only once visible
+    if (dlg) {
+      /* dialog frame: the (position:fixed, top-layer) dialog is the
+         absolute tip's containing block — position with viewport-rect
+         deltas, no scroll offsets, clamped to the dialog's own box */
+      const h = dlg.getBoundingClientRect();
+      t.style.left = Math.max(8, Math.min(
+        r.left - h.left + r.width / 2 - t.offsetWidth / 2,
+        h.width - t.offsetWidth - 8)) + 'px';
+      const above = r.top - h.top - t.offsetHeight - 6;
+      t.style.top = (above < 4 ? r.bottom - h.top + 6 : above) + 'px';
+      return;
+    }
+    /* Above the element, anchored to its CENTER, clamped to the viewport —
+       one mechanism app-wide, shared with every hover-tooltip site across
+       the templates. */
+    t.style.left = Math.max(8, Math.min(
+      r.left + r.width / 2 - t.offsetWidth / 2,
+      window.innerWidth - t.offsetWidth - 8)) + 'px';
+    /* Vertical clamp: near the top of the viewport "above the element"
+       goes negative and the tip opens off-screen. Flip below instead
+       whenever the computed top would land above the visible fold. */
+    const aboveTop = r.top + window.scrollY - t.offsetHeight - 6;
+    t.style.top = (aboveTop < window.scrollY + 4
+      ? r.bottom + window.scrollY + 6 : aboveTop) + 'px';
+  }
+  function hide() { if (tip) tip.hidden = true; }
+  /* Delegated, not bound per element at load: the E4 step modal builds
+     its In|Out buttons at open time (viewer.js), and chat's after-load
+     the link preview above already taught what load-time
+     binding does to content that arrives later. */
+  const anchorOf = e =>
+    e.target instanceof Element ? e.target.closest(SEL) : null;
+  document.addEventListener('mouseover', e => {
+    const el = anchorOf(e);
+    if (el) show(el); else hide();
+  });
+  document.addEventListener('focusin', e => {
+    const el = anchorOf(e);
+    if (el) show(el); else hide();
+  });
+})();
+</script>

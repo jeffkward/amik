@@ -1,0 +1,4 @@
+# Amik's only dependency. The engine (amik/core) and the loop are stdlib
+# only; this is the board's renderer, and a test asserts the engine keeps
+# importing nothing else.
+jinja2>=3.1

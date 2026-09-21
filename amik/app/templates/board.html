@@ -1,0 +1,442 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+{# No maximum-scale and no user-scalable=no. iOS has ignored both since
+   iOS 10 because blocking zoom is an accessibility failure, so they do
+   nothing on a phone; on Android they blocked pinch for real and failed
+   WCAG 1.4.4 doing it. Accidental zoom is DOUBLE-TAP zoom, and
+   `touch-action:manipulation` in the stylesheet is what removes it. #}
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amik</title>
+<link rel="stylesheet" href="{{ static('amik.css') }}">
+</head>
+<body class="akpage">
+{% from "_callout.html" import callout %}
+{% from "_icons.html" import i_plus, i_pause, i_branch, i_prototype,
+   i_play, i_pencil %}
+{# Amik's own header. There is no nav: the board is the whole app when it
+   runs alone, and when it is embedded the host's navigation is the
+   host's business and not something Amik may draw.
+
+   Three cells, not a row with a spacer: the host's name is CENTRED on
+   the bar, and a flex row would centre it between whatever the two ends
+   happen to weigh instead. A missing name or a missing toggle leaves its
+   cell empty and moves nothing. #}
+{# The id is what the live board repaints. Everything in here is derived
+   from something outside the board file — the project's name, and the
+   arm/pause pill, which is the one thing someone watches while the loop
+   runs and so the one whose staleness would be actively misleading
+   rather than merely wrong. #}
+<header class="akhead" id="aktopbar">
+  {# The mark is the beaver emoji, in its own element so the brand's gap
+     applies to it — a bare glyph beside the word is one anonymous flex
+     item, and a gap has nothing to sit between. `aria-hidden` because
+     the word it precedes already names the application. #}
+  <span class="akbrand"><span class="akmark" aria-hidden="true"
+    >🦫</span>Amik</span>
+  {# The host project, in the muted token: this board belongs to a
+     project and says so, without competing with the board itself. Absent
+     when undeclared — Amik guesses no name. #}
+  <span class="akhost">{% if project.ok %}{{ project.data.name }}{% endif %}</span>
+  <span class="akarm">
+    {# The gate on the loop, which is one line in amik.toml and nothing
+       else — so the wording promises a DECLARATION, not a daemon. The
+       button shows the ACTION available, the media convention: pause
+       while it is armed, play while it is not. There is no toggle at all
+       on an instance that declares no project, because there is no gate
+       there to move.
+
+       Both wordings ride as data attributes and the state is rendered
+       here, so the button is correctly labelled before any script runs
+       and the script has no second copy of the sentences to drift from.
+       Both glyphs ship and the stylesheet shows one: a script that
+       rebuilt an SVG would be a second copy of the icon. #}
+    {% if project.ok %}
+    {% set on = project.data.armed %}
+    {% set armed_tip = 'Armed — the loop may take the next Ready card. Click to pause.' %}
+    {% set paused_tip = 'Paused — the loop takes nothing new. Click to arm.' %}
+    {% set armed_label = 'Pause the queue' %}
+    {% set paused_label = 'Arm the queue' %}
+    <button type="button" class="akarmbtn tip" id="akarmbtn"
+            data-armed="{{ 'true' if on else 'false' }}"
+            data-armed-tip="{{ armed_tip }}"
+            data-paused-tip="{{ paused_tip }}"
+            data-armed-label="{{ armed_label }}"
+            data-paused-label="{{ paused_label }}"
+            data-tip="{{ armed_tip if on else paused_tip }}"
+            aria-label="{{ armed_label if on else paused_label }}"
+      ><span class="akarmpause">{{ i_pause() }}</span
+      ><span class="akarmplay">{{ i_play() }}</span></button>
+    {% endif %}
+  </span>
+</header>
+<main class="wrap">
+
+{# The heading stays in the document and leaves the page: a board wants
+   the pixels, and its name is already in the browser tab. Hidden by a
+   scoped rule rather than display:none, which would take it from screen
+   readers too and leave the page with no heading at all.
+
+   The standing how-to-use callout is gone with it. It described a drag,
+   a chip and a click — three things this board teaches by being used,
+   to an audience of one who has now used it. The two callouts that
+   REMAIN are faults, not instructions: unparseable lines, and a refused
+   write. #}
+<h1>Amik</h1>
+{% if board.skipped %}
+{{ callout('warn', board.skipped ~ ' line(s) could not be parsed and are not
+  shown. The rest of the board is intact.') }}
+{% endif %}
+{# Shown when a write is refused. The text is set from the server's own
+   reason: "changed on disk" is one cause among several, and claiming it
+   for a rejected rung or an empty title sends you looking in the wrong
+   place. #}
+{% call callout('alert', id='akstale', hidden=true) %}
+  <span id="akmsg"></span>
+{% endcall %}
+
+{# Shown after a pause that landed on work already in flight. Info, not
+   warn: nothing is wrong — a card the loop has started runs to the end,
+   and saying so is the only way the owner knows the board will keep
+   moving for a while after they pressed pause. It clears on the next
+   toggle, the same way the refusal banner above clears on the next
+   successful write. #}
+{% call callout('info', id='akarmnote', hidden=true) %}
+  <span id="akarmmsg"></span>
+{% endcall %}
+
+{# Shown when the live feed or a refresh cannot reach the server. The
+   board on screen stays exactly as it was — a board wiped because one
+   fetch failed is worse than a board a few seconds old. #}
+{% call callout('warn', id='akoffline', hidden=true) %}
+  Not receiving updates. The board on screen may be out of date.
+{% endcall %}
+
+{# A board nothing can work is still a board — the shipped config
+   promises it — so this never hides the columns. It says so instead,
+   which is what the page did not do at all: the reason was printed once
+   into a terminal log, and somebody dragging a card to Ready saw
+   nothing happen and got no account of why.
+
+   Capable, not armed. A pause is the owner's own doing and the toggle
+   beside the name already shows it; a callout repeating it would be
+   noise on every paused board. #}
+{% if not capable.ok %}
+{% call callout('warn', id='akcannotwork') %}
+  {# The reason is a lowercase fragment, worded to follow the banner's
+     dash — "working cards: no — no amik/amik.toml in this instance".
+     Ending the sentence before it and starting a new one mid-phrase is
+     how it first shipped, and it read as a typo. #}
+  <strong>Nothing will work these cards</strong> — {{ capable.reason }}.
+  The board is yours to use by hand in the meantime.
+{% endcall %}
+{% endif %}
+
+{# Two pills, each its own disclosure. They were one — the branch chip
+   beside the words "N recent commits" — which made the count a label to
+   read rather than the thing to click, and left no room for a second
+   fact with a panel of its own. A control nested inside that summary
+   would have been a button inside a button. #}
+<div class="akbar">
+  {# The tree's branch and what just landed. With most work going
+     straight to master, this list is the review surface, not
+     decoration. #}
+  {% if git.ok %}
+  <details class="akgit">
+    <summary><span class="chip akbranch">{{ i_branch() }}{{ git.data.branch }}</span></summary>
+    <ul class="akgitlog">
+      {% for c in git.data.commits %}<li><code>{{ c.sha }}</code>
+        {{ c.subject }}</li>{% endfor %}
+    </ul>
+  </details>
+  {% endif %}
+
+  {# What green means here, and what it last said. NOT a count of tests:
+     counting would mean recognising pytest from jest from cargo, and
+     reading zero on every project whose verify is a compound command.
+     Amik reports its own run, which it owns. #}
+  <details class="akverifybox">
+    <summary><span class="chip akverify{{ ' akverifynone'
+        if not project.ok or not project.data.verify }}">
+      {#- The undeclared state stays about the CONFIG. "No tests" would
+          be a different claim and a wrong one: it reads as a project
+          with no suite, when what is missing is the one line saying how
+          to run whatever suite there is. -#}
+      {%- if not project.ok or not project.data.verify -%}
+        No Verify Set
+      {%- elif verified.ok is none -%}
+        Tests Not Run
+      {%- elif verified.ok -%}
+        Tests Passed
+      {%- else -%}
+        Tests Failed
+      {%- endif -%}
+    </span></summary>
+    <div class="akverifypanel">
+      {% if not project.ok or not project.data.verify %}
+      <p>No <code>verify</code> command is declared, so nothing here can
+        be checked and no agent will work a card.</p>
+      <p>Set <code>verify</code> in <code>amik/amik.toml</code> — any
+        shell command that exits 0 when the project is healthy.</p>
+      {% else %}
+      <p><code>{{ project.data.verify }}</code></p>
+      {% if verified.ok is none %}
+      <p class="meta">Amik has not run it yet. It runs one when a card
+        lands.</p>
+      {% else %}
+      <p class="meta">Last run {{ verified.at }}.</p>
+      {% if verified.tail %}<pre class="akverifytail">{{ verified.tail }}</pre>{% endif %}
+      {% endif %}
+      {% endif %}
+    </div>
+  </details>
+</div>
+
+{# Inbox → To-Do → Ready → Doing → Done, then the shelf. `rank` orders each
+   column and nothing else does; the closed three arrive collapsed because
+   they are most of the file and none of it is work in flight. #}
+<div class="akboard" data-base="{{ base }}" data-fingerprint="{{ board.fingerprint }}">
+  {% for col in board.columns %}
+  <section class="akcol ak-{{ col.status }}{{ ' akcollapsed' if col.collapsed }}"
+           data-status="{{ col.status }}">
+    {# A bar, not one button: a + nested inside the collapse toggle would
+       be a button inside a button. #}
+    <div class="akcolbar">
+      <button type="button" class="akcolhead" aria-expanded="{{ 'false' if col.collapsed else 'true' }}">
+        {# The count leads, and an empty column shows no pill at all — a
+           "0" is the one number that says nothing the words do not. #}
+        <span class="akcount"{{ ' hidden' if not col.count }}>{{ col.count }}</span>
+        <span class="akcolname">{{ col.label }}</span>
+      </button>
+      {# Only inbox: a new thought always lands where a decision is owed.
+         No tooltip — the glyph and its colour say what it does. The
+         aria-label stays: it is the accessible NAME of a glyph-only
+         button, not a hint, and nothing else names this control.
+
+         An SVG plus, not a "+" character: a text glyph is centred on the
+         font's math axis rather than on its box, so it sits a hair high
+         inside a circle however the box is centred. #}
+      {% if col.status == 'inbox' %}
+      <button type="button" class="addbtn" aria-label="Add an item"
+              >{{ i_plus() }}</button>
+      {% endif %}
+    </div>
+    <div class="akdrop">
+      {# Inside the drop zone on purpose: an empty column's message invites
+         a drop, so it has to be the thing that accepts one. The dashed box
+         is the invitation — a bare line of text reads like a caption. #}
+      {% if not col.count %}<p class="nodata akempty">{{ 'Drag here when it is
+        ready to pull.' if col.status == 'ready' else 'Nothing here.' }}</p>
+      {% endif %}
+      {% for c in col.cards %}
+      <button type="button" class="akcard" draggable="true"
+              data-id="{{ c.id }}">
+        <span class="aktitle">{{ c.title | inline_md | safe }}</span>
+        {% include "_chips.html" %}
+      </button>
+      {% endfor %}
+    </div>
+  </section>
+  {% endfor %}
+</div>
+
+{# A card's data block is FETCHED when its modal opens, from
+   `GET /cards/{id}`. Rendering all of them here cost 703 KB of a 768 KB
+   page to open one card at a time. #}
+
+{# The dialog is a flex column: only the middle scrolls, and the action
+   row is a real last row rather than something sticky floating over it.
+   It used to be `position:sticky` with an opaque background, which on a
+   window short enough to make the dialog scroll painted over whatever
+   passed beneath — and what passed beneath was the editor's bottom
+   border. #}
+<dialog id="akdlg" class="ask">
+  <div class="akscroll">
+  {# The pencil sits on the title line, at the card's top right, because
+     that is where a control that acts on the whole card belongs -- next
+     to the card's name rather than beside its chips. The title takes the
+     space that is left and wraps within it, so a long one runs to the
+     pencil and not under it. #}
+  <div class="vtitle">
+    <h3 id="aktitle"></h3>
+    {# No tooltip. The modal focuses this button when a card opens with
+       nothing else to focus, and a tooltip bound to focus has no hover
+       to end it on a touch screen -- it simply stays, pinned over the
+       card. The aria-label carries the same words for a screen reader,
+       which is the reader that needed them. #}
+    <button type="button" class="akpencil" id="akedit"
+            aria-label="Edit this card">{{ i_pencil() }}</button>
+  </div>
+  {# The id names the row in the file, which is what you need when you are
+     about to grep for it, or name it in another card's prose. #}
+  <p class="akid"><code id="akidtext"></code></p>
+  {# The tab strip, built by the modal from the card's questions. Hidden
+     and empty on a card with no questions, which is most of them — the
+     common card pays nothing for this and renders exactly as before. #}
+  <div id="aktabs" class="aktabs" role="tablist" hidden></div>
+  {# The Details pane: the fields and the body editor, which are one
+     thing to look at and so one tab. A card with no questions never
+     switches away from it. #}
+  <div id="akdetails" role="tabpanel">
+  {# View mode, which is how a card OPENS. Cards are read far more often
+     than they are written, and a read used to land on a form it never
+     touched. The prose is rendered, the facts are chips, and the pencil
+     swaps in the form. #}
+  <div id="akview">
+    <div class="akviewhead">
+      {# Filled by cloning the card's own rendered strip; the modal
+         derives no chip of its own. #}
+      <div id="akviewchips"></div>
+      {# On the head row rather than over the prose: a control floating
+         on content is one more thing between a reader and the words.
+         There is no way back from edit mode short of Save, which ends
+         the card, or Close — a return to view would show the file's
+         prose beside an editor holding something else, which is two
+         answers to what this card says. #}
+    </div>
+    <div id="akviewbody" class="akviewbody akprose"></div>
+  </div>
+  {# Edit mode: what Details used to show on every open. #}
+  <div id="akform" hidden>
+  {# The fields the modal owns. status and rank are absent on purpose:
+     they belong to the drag, and two writers for one field is how a
+     board and its file drift apart. #}
+  <div id="akfields" class="akfields akf-trio">
+    <label class="akfield akfield-wide">Title
+      <input id="akf-title" type="text" autocomplete="off"></label>
+    <label class="akfield">Planning
+      <select id="akf-planning">
+        <option value="none">N/A</option>
+        {% for rung in rungs %}<option value="{{ rung }}">{{ rung }}</option>
+        {% endfor %}
+      </select></label>
+    {# A select, not an input+datalist: a datalist only reveals itself on
+       typing or on a hairline arrow, which is why the old control read as
+       broken. "New area…" is the escape hatch, since areas are added
+       deliberately and rarely. #}
+    <label class="akfield">Area
+      <select id="akf-group">
+        <option value="none">— none —</option>
+        {% for g in board.groups %}<option value="{{ g }}">{{ g }}</option>
+        {% endfor %}
+        <option value="__new__">New area…</option>
+      </select></label>
+    {# Status, because dragging across lanes is the one board gesture a
+       phone makes worse. It does NOT go to the edit route: `status` and
+       `rank` are the drag's business and `move` is their only writer, so
+       this posts to /amik/move — the same door the drag uses. #}
+    <label class="akfield">Status
+      <select id="akf-status">
+        {% for status, label, _c in columns %}<option value="{{ status }}">{{ label }}</option>
+        {% endfor %}
+      </select></label>
+    <label class="akfield akfield-wide" id="akf-newgroup-row" hidden>New area
+      <input id="akf-newgroup" type="text" autocomplete="off"
+             placeholder="one word, lowercase, hyphens"></label>
+    {# Handling: where the work lands and whether the queue stops. Icon
+       toggles rather than checkboxes — each reads as an instruction, not
+       as a question, and `aria-pressed` is what carries the state to
+       anything that is not looking at the glyph. #}
+    <div class="akftoggles">
+      <button type="button" class="akftoggle" id="akf-halt"
+              aria-pressed="false" aria-label="Pause for review"
+              >{{ i_pause() }}</button>
+      <button type="button" class="akftoggle" id="akf-prototype"
+              aria-pressed="false" aria-label="Build a prototype"
+              >{{ i_prototype() }}</button>
+      {# Once a prototype EXISTS the toggle stops being a toggle: turning
+         it off would orphan the directory on disk, which only the sweep
+         over CLOSED cards would ever notice. So the control becomes the
+         link to the thing it built, in the same slot — a separate <a>
+         rather than one nested in the button, which HTML forbids. The
+         button stays in the DOM carrying its state, because that is what
+         the save posts and what forces the halt. #}
+      <a id="akf-protolink" class="akftoggle akftlink" target="_blank"
+         rel="noopener" hidden>{{ i_prototype() }}<span>View prototype</span></a>
+      {# The branch NAME, which the board carries nowhere else: the chip
+         that holds it sits inside a draggable button-card and so cannot
+         be focused, putting its tooltip out of a keyboard's reach. Inert
+         text, not a control — `branch` is deliberately outside EDITABLE
+         and `set_branch` is its only door. #}
+      <span id="akf-branchname" class="akftoggle akftlink akftfact"
+            hidden>{{ i_branch() }}<span></span></span>
+    </div>
+  </div>
+  {# A plain <textarea>, deliberately. A rich editor paints its own
+     contenteditable surface, and iOS gives one none of the keyboard's
+     help: no autocorrect, no autocapitalisation, no predictive strip. A
+     board written from a phone needs those more than it needs syntax
+     colours on markdown it can already read in View mode.
+
+     The three attributes are the browser's own defaults, named anyway:
+     `spellcheck="false"` is the house style on a source field and would
+     turn the keyboard back off if it were ever copied in here. #}
+  <textarea id="akeditor" class="akeditor" spellcheck="true"
+            autocorrect="on" autocapitalize="sentences"
+            placeholder="Write markdown&hellip;"></textarea>
+  </div>
+  </div>
+  {# Built by the modal from the .akqsrc nodes: one PANE per question,
+     all of them inside this one node. The boxes stay here whichever tab
+     is showing, which is what lets the save path go on reading every
+     `.akqbox` under it without knowing tabs exist. #}
+  <div id="akqlist" class="akqlist" hidden></div>
+  {# The Outcome pane. Filled by cloning the card's rendered block, and
+     hidden outright on a card that has no outcome — so the tab it
+     belongs to only exists once there is something to read. #}
+  <div id="akoutcome" class="akoutcome" role="tabpanel" hidden>
+    {# The prose. Its own element because the pane REPLACES it on every
+       open, and the actions below must survive that. #}
+    <div id="akoutbody" class="akprose"></div>
+    {# Where the judgement is made. You read what the agent produced,
+       decide it is wrong, and the way out is right here rather than
+       in a footer already four controls wide on a phone.
+
+       ONE button, because every other verdict IS a destination and
+       destinations clean up after themselves however you reach them:
+       Done lands the card, Abandoned drops its branch, and answering
+       the last question returns it to Ready on its own. Throwing the
+       build away and going again is the only one with no status to
+       drag to — dragging to Ready keeps the branch, and the next run
+       would resume the attempt being rejected.
+
+       Small and outlined: real, rare, and not competing with Save. #}
+    <div class="akoutacts">
+      <button type="button" class="btn small outline" id="akdiscard" hidden
+              >Try Again…</button>
+    </div>
+  </div>
+  </div>
+  {# The page's own #akstale banner is unreachable while this is open: a
+     <dialog> shown with showModal() is in the top layer and paints its
+     own backdrop over everything else, so a refused Save reported there
+     is invisible and the button reads as doing nothing at all. Same
+     text, inside the top layer, next to the button that was pressed. #}
+  {% call callout('alert', id='akdlgmsg', hidden=true) %}
+    <span id="akdlgwhy"></span>
+  {% endcall %}
+  {# One row. Save and Close are the same gesture's two endings so they
+     sit together; Delete is the opposite of both and sits apart; and the
+     dates take the space between them, which was otherwise dead. #}
+  <div class="ask-actions akactions">
+    <button class="btn danger" id="akdelete">Delete</button>
+    <div id="akdateslot" class="akdateslot"></div>
+    <span class="akactright">
+      <button class="btn secondary" id="akclose">Close</button>
+      <button class="btn primary" id="aksave">Save</button>
+    </span>
+  </div>
+</dialog>
+<script src="{{ static('amik.js') }}"></script>
+
+{# The confirm dialog and the tooltip engine, which the board's script
+   calls into. In the face these lived in a shared shell; here they
+   belong to Amik, because nothing else is going to provide them. #}
+{# Cmd/Ctrl+K from anywhere on the board. Included here because the
+   shell that used to carry it is not Amik's. #}
+{% include "_quickadd.html" %}
+{% include "_shell.html" %}
+</main>
+</body>
+</html>

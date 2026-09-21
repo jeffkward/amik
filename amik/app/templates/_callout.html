@@ -1,0 +1,17 @@
+{# The in-app instructions box. One short paragraph of help copy, sitting
+   above the thing it explains. Four kinds, each a left border colour drawn
+   from theme tokens:
+     info   the default - what this page is for
+     tip    a helpful nudge
+     warn   something needs attention
+     alert  urgent, and bold
+   Rules live in amik.css (.callout and its four modifiers); this macro only
+   guarantees the shape.
+
+   Two body forms. Pass `body` for plain text; use {% call %} when the body
+   carries markup or a Jinja control structure, which a string argument
+   cannot. `id` and `hidden` exist for the two callouts the step viewer
+   fills in from JavaScript - it finds them by id and toggles hidden. #}
+{% macro callout(kind, body='', id=none, hidden=false) -%}
+<div{% if id %} id="{{ id }}"{% endif %} class="callout {{ kind }}"{% if hidden %} hidden{% endif %}>{{ caller() if caller is defined else body }}</div>
+{%- endmacro %}
